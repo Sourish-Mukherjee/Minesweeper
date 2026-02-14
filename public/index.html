@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Play Minesweeper online — singleplayer or race friends in multiplayer mode!">
+  <title>Minesweeper — Singleplayer & Multiplayer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <!-- ═══════════════════ MENU SCREEN ═══════════════════ -->
+  <div id="menu-screen" class="screen active">
+    <div class="hero">
+      <div class="logo">
+        <span class="logo-icon">💣</span>
+        <h1>Mine<span class="accent">sweeper</span></h1>
+      </div>
+      <p class="tagline">Classic puzzle. Modern vibes.</p>
+    </div>
+    <div class="glass-card menu-card">
+      <label class="input-label" for="player-name">Your Name</label>
+      <input type="text" id="player-name" class="input" placeholder="Enter your name" maxlength="16" autocomplete="off">
+      <label class="input-label" for="difficulty-select">Difficulty</label>
+      <div class="select-group">
+        <button class="select-btn active" data-diff="easy">
+          <span class="diff-icon">🟢</span>
+          <span class="diff-name">Easy</span>
+          <span class="diff-info">9×9 · 10 mines · 2 min</span>
+        </button>
+        <button class="select-btn" data-diff="medium">
+          <span class="diff-icon">🟡</span>
+          <span class="diff-name">Medium</span>
+          <span class="diff-info">16×16 · 40 mines · 10 min</span>
+        </button>
+      </div>
+      <div class="menu-actions">
+        <button id="btn-singleplayer" class="btn btn-primary">
+          <span>🎮</span> Singleplayer
+        </button>
+        <button id="btn-create-room" class="btn btn-secondary">
+          <span>🏠</span> Create Room
+        </button>
+        <button id="btn-join-room" class="btn btn-secondary">
+          <span>🔗</span> Join Room
+        </button>
+      </div>
+    </div>
+    <div id="join-modal" class="modal hidden">
+      <div class="glass-card modal-card">
+        <h2>Join Room</h2>
+        <input type="text" id="room-code-input" class="input" placeholder="Enter 6-char code" maxlength="6" autocomplete="off">
+        <div class="modal-actions">
+          <button id="btn-join-confirm" class="btn btn-primary">Join</button>
+          <button id="btn-join-cancel" class="btn btn-ghost">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ LOBBY SCREEN ═══════════════════ -->
+  <div id="lobby-screen" class="screen">
+    <div class="glass-card lobby-card">
+      <h2>🏠 Game Lobby</h2>
+      <div class="room-code-display">
+        <span class="label">Room Code</span>
+        <span id="lobby-room-code" class="code">------</span>
+        <button id="btn-copy-code" class="btn btn-ghost btn-sm">📋 Copy</button>
+      </div>
+      <div class="lobby-info">
+        <span id="lobby-difficulty" class="badge">Easy</span>
+        <span id="lobby-time" class="badge">2:00</span>
+      </div>
+      <div id="lobby-players" class="player-list"></div>
+      <button id="btn-start-game" class="btn btn-primary btn-lg hidden">🚀 Start Game</button>
+      <p id="lobby-waiting" class="subtle-text">Waiting for host to start…</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ GAME SCREEN ═══════════════════ -->
+  <div id="game-screen" class="screen">
+    <div class="game-header">
+      <div class="stat-box">
+        <span class="stat-icon">💣</span>
+        <span id="mine-count" class="stat-value">10</span>
+      </div>
+      <div class="stat-box timer-box">
+        <span class="stat-icon">⏱️</span>
+        <span id="timer" class="stat-value">2:00</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-icon">🚩</span>
+        <span id="flag-count" class="stat-value">0</span>
+      </div>
+    </div>
+    <div id="board-container" class="board-container"></div>
+    <div id="mp-sidebar" class="mp-sidebar hidden">
+      <h3>Players</h3>
+      <div id="mp-player-list" class="mp-player-list"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ RESULT SCREEN ═══════════════════ -->
+  <div id="result-screen" class="screen">
+    <div class="glass-card result-card">
+      <div id="result-icon" class="result-icon">🏆</div>
+      <h2 id="result-title">You Win!</h2>
+      <p id="result-time" class="result-time">Time: 1:23</p>
+      <div id="result-leaderboard" class="leaderboard hidden"></div>
+      <button id="btn-play-again" class="btn btn-primary btn-lg">🔄 Play Again</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ CANVAS FOR CONFETTI ═══════════════════ -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
