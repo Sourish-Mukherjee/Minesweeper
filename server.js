@@ -24,45 +24,41 @@ const io = new Server(server);
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// ── In-memory leaderboard store ─────────────────────────────
-const leaderboard = {
-  easy: [],   // { name, time, mode, date }
-  medium: [],
-};
-
-const MAX_LEADERBOARD = 50;
-
-function addLeaderboardEntry(difficulty, entry) {
-  const list = leaderboard[difficulty];
-  if (!list) return;
-  list.push(entry);
-  list.sort((a, b) => a.time - b.time);
-  if (list.length > MAX_LEADERBOARD) list.length = MAX_LEADERBOARD;
-}
+const db = require('./db');
 
 // ── REST API for leaderboard ────────────────────────────────
-app.get('/api/leaderboard/:difficulty', (req, res) => {
+app.get('/api/leaderboard/:difficulty', async (req, res) => {
   const diff = req.params.difficulty;
-  if (!leaderboard[diff]) return res.status(400).json({ error: 'Invalid difficulty' });
-  res.json(leaderboard[diff]);
+  if (!['easy', 'medium'].includes(diff)) return res.status(400).json({ error: 'Invalid difficulty' });
+  try {
+    const entries = await db.getLeaderboard(diff);
+    res.json(entries);
+  } catch (e) {
+    console.error('Leaderboard fetch error:', e);
+    res.status(500).json({ error: 'Internal error' });
+  }
 });
 
-app.post('/api/leaderboard', (req, res) => {
+app.post('/api/leaderboard', async (req, res) => {
   const { name, difficulty, time, mode } = req.body;
   if (!name || !difficulty || time == null || !mode) {
     return res.status(400).json({ error: 'Missing fields' });
   }
-  if (!leaderboard[difficulty]) {
+  if (!['easy', 'medium'].includes(difficulty)) {
     return res.status(400).json({ error: 'Invalid difficulty' });
   }
-  const entry = {
-    name: String(name).slice(0, 16),
-    time: Number(time),
-    mode,
-    date: new Date().toISOString(),
-  };
-  addLeaderboardEntry(difficulty, entry);
-  res.json({ ok: true, rank: leaderboard[difficulty].indexOf(entry) + 1 });
+  try {
+    await db.addEntry({
+      name: String(name).slice(0, 16),
+      difficulty,
+      time: Number(time),
+      mode,
+    });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Leaderboard submit error:', e);
+    res.status(500).json({ error: 'Internal error' });
+  }
 });
 
 // ── In-memory room store ────────────────────────────────────────────
@@ -214,11 +210,11 @@ io.on('connection', (socket) => {
       player.time = (Date.now() - player.startTime) / 1000;
 
       // Record to leaderboard
-      addLeaderboardEntry(room.difficulty, {
+      db.addEntry({
         name: player.name,
+        difficulty: room.difficulty,
         time: player.time,
         mode: 'multiplayer',
-        date: new Date().toISOString(),
       });
 
       const view = getClientView(player.board, player.rows, player.cols, true);
