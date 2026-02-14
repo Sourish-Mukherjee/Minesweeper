@@ -4,6 +4,10 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+
+// Load .env if present (for Supabase credentials)
+try { require('dotenv').config(); } catch (_) { /* dotenv not installed yet */ }
+
 const {
   DIFFICULTIES,
   generateBoard,
@@ -18,6 +22,48 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json());
+
+// ── In-memory leaderboard store ─────────────────────────────
+const leaderboard = {
+  easy: [],   // { name, time, mode, date }
+  medium: [],
+};
+
+const MAX_LEADERBOARD = 50;
+
+function addLeaderboardEntry(difficulty, entry) {
+  const list = leaderboard[difficulty];
+  if (!list) return;
+  list.push(entry);
+  list.sort((a, b) => a.time - b.time);
+  if (list.length > MAX_LEADERBOARD) list.length = MAX_LEADERBOARD;
+}
+
+// ── REST API for leaderboard ────────────────────────────────
+app.get('/api/leaderboard/:difficulty', (req, res) => {
+  const diff = req.params.difficulty;
+  if (!leaderboard[diff]) return res.status(400).json({ error: 'Invalid difficulty' });
+  res.json(leaderboard[diff]);
+});
+
+app.post('/api/leaderboard', (req, res) => {
+  const { name, difficulty, time, mode } = req.body;
+  if (!name || !difficulty || time == null || !mode) {
+    return res.status(400).json({ error: 'Missing fields' });
+  }
+  if (!leaderboard[difficulty]) {
+    return res.status(400).json({ error: 'Invalid difficulty' });
+  }
+  const entry = {
+    name: String(name).slice(0, 16),
+    time: Number(time),
+    mode,
+    date: new Date().toISOString(),
+  };
+  addLeaderboardEntry(difficulty, entry);
+  res.json({ ok: true, rank: leaderboard[difficulty].indexOf(entry) + 1 });
+});
 
 // ── In-memory room store ────────────────────────────────────────────
 const rooms = new Map();
@@ -166,6 +212,14 @@ io.on('connection', (socket) => {
       player.finished = true;
       player.won = true;
       player.time = (Date.now() - player.startTime) / 1000;
+
+      // Record to leaderboard
+      addLeaderboardEntry(room.difficulty, {
+        name: player.name,
+        time: player.time,
+        mode: 'multiplayer',
+        date: new Date().toISOString(),
+      });
 
       const view = getClientView(player.board, player.rows, player.cols, true);
       socket.emit('game-over', {

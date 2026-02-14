@@ -50,7 +50,8 @@
 html,
 body {
     height: 100%;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 body {
@@ -160,6 +161,67 @@ body {
 .menu-card {
     width: 100%;
     max-width: 420px;
+}
+
+/* ── Home Leaderboard ─────────────────────────────────────── */
+.home-leaderboard {
+    width: 100%;
+    max-width: 420px;
+    margin-top: 20px;
+}
+
+.home-leaderboard h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.home-lb-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.home-lb-tab {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.home-lb-tab:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.home-lb-tab.active {
+    background: rgba(108, 92, 231, 0.15);
+    border-color: var(--accent);
+    color: var(--text-primary);
+}
+
+.home-lb-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.home-lb-empty {
+    text-align: center;
+    padding: 24px 12px;
+    color: var(--text-muted);
+    font-size: 14px;
 }
 
 /* ── Inputs ───────────────────────────────────────────────── */
@@ -547,9 +609,9 @@ body {
 }
 
 .cell.hidden-cell {
-    background: linear-gradient(145deg, #2a3a52, #1e2d40);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    background: linear-gradient(145deg, #2d4263, #233550);
+    border: 1px solid rgba(100, 140, 200, 0.2);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .cell.hidden-cell:hover {
@@ -564,10 +626,11 @@ body {
 }
 
 .cell.revealed-cell {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: #0d1520;
+    border: 1px solid rgba(255, 255, 255, 0.04);
     cursor: default;
     animation: revealPop 0.25s ease;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 @keyframes revealPop {

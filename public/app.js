@@ -52,12 +52,16 @@ const dom = {
   btnPlayAgain:   $('#btn-play-again'),
   // Confetti
   confettiCanvas: $('#confetti-canvas'),
+  // Home Leaderboard
+  homeLBList:     $('#home-lb-list'),
+  homeLBTabs:     $$('.home-lb-tab'),
 };
 
 // ── State ────────────────────────────────────────────────────
 let socket = null;
 let gameMode = null;            // 'singleplayer' | 'multiplayer'
 let difficulty = 'easy';
+let lbDifficulty = 'easy';      // which leaderboard tab is active
 let board = null;               // client-side board for singleplayer
 let rows = 0, cols = 0, totalMines = 0;
 let timeLimit = 0;
@@ -144,7 +148,21 @@ dom.roomCodeInput.addEventListener('keydown', (e) => {
 dom.btnPlayAgain.addEventListener('click', () => {
   cleanup();
   showScreen('menu');
+  fetchLeaderboard(lbDifficulty);
 });
+
+// Home Leaderboard Tabs
+dom.homeLBTabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    dom.homeLBTabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    lbDifficulty = tab.dataset.lbDiff;
+    fetchLeaderboard(lbDifficulty);
+  });
+});
+
+// Fetch leaderboard on page load
+fetchLeaderboard('easy');
 
 // Copy code
 dom.btnCopyCode.addEventListener('click', () => {
@@ -342,6 +360,11 @@ function handleClick(r, c) {
       clearInterval(timerInterval);
       timerInterval = null;
       const elapsed = (Date.now() - startTimestamp) / 1000;
+
+      // Submit score to leaderboard
+      const pName = dom.playerName.value.trim() || 'Player';
+      submitScore(pName, difficulty, elapsed, 'singleplayer');
+
       showResult(true, elapsed);
     }
   } else {
@@ -682,6 +705,51 @@ function cleanup() {
 
   const timerBox = dom.timer.closest('.timer-box');
   timerBox.classList.remove('warning', 'danger');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  LEADERBOARD
+// ═══════════════════════════════════════════════════════════════
+
+async function fetchLeaderboard(diff) {
+  try {
+    const res = await fetch(`/api/leaderboard/${diff}`);
+    const data = await res.json();
+    renderHomeLeaderboard(data);
+  } catch (e) {
+    console.error('Failed to fetch leaderboard:', e);
+  }
+}
+
+function renderHomeLeaderboard(entries) {
+  dom.homeLBList.innerHTML = '';
+  if (!entries || entries.length === 0) {
+    dom.homeLBList.innerHTML = '<div class="home-lb-empty">No games played yet. Be the first!</div>';
+    return;
+  }
+  const rankEmojis = ['🥇', '🥈', '🥉'];
+  entries.slice(0, 10).forEach((e, i) => {
+    const row = document.createElement('div');
+    row.className = 'lb-row' + (i === 0 ? ' winner' : '');
+    row.innerHTML = `
+      <span class="lb-rank">${rankEmojis[i] || (i + 1)}</span>
+      <span class="lb-name">${escapeHtml(e.name)}</span>
+      <span class="lb-result won">${formatTime(e.time)}</span>
+    `;
+    dom.homeLBList.appendChild(row);
+  });
+}
+
+async function submitScore(name, diff, time, mode) {
+  try {
+    await fetch('/api/leaderboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, difficulty: diff, time, mode }),
+    });
+  } catch (e) {
+    console.error('Failed to submit score:', e);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
