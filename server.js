@@ -27,12 +27,33 @@ app.use(express.json());
 const db = require('./db');
 
 // ── REST API for leaderboard ────────────────────────────────
-app.get('/api/leaderboard/:difficulty', async (req, res) => {
+app.get('/api/leaderboard/sp/:difficulty', async (req, res) => {
   const diff = req.params.difficulty;
   if (!['easy', 'medium'].includes(diff)) return res.status(400).json({ error: 'Invalid difficulty' });
   try {
-    const entries = await db.getLeaderboard(diff);
-    res.json(entries);
+    res.json(await db.getSPBestTimes(diff));
+  } catch (e) {
+    console.error('Leaderboard fetch error:', e);
+    res.status(500).json({ error: 'Internal error' });
+  }
+});
+
+app.get('/api/leaderboard/mp/:difficulty', async (req, res) => {
+  const diff = req.params.difficulty;
+  if (!['easy', 'medium'].includes(diff)) return res.status(400).json({ error: 'Invalid difficulty' });
+  try {
+    res.json(await db.getMPBestTimes(diff));
+  } catch (e) {
+    console.error('Leaderboard fetch error:', e);
+    res.status(500).json({ error: 'Internal error' });
+  }
+});
+
+app.get('/api/leaderboard/mp-wins/:difficulty', async (req, res) => {
+  const diff = req.params.difficulty;
+  if (!['easy', 'medium'].includes(diff)) return res.status(400).json({ error: 'Invalid difficulty' });
+  try {
+    res.json(await db.getMPMostWins(diff));
   } catch (e) {
     console.error('Leaderboard fetch error:', e);
     res.status(500).json({ error: 'Internal error' });

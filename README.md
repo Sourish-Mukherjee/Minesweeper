@@ -8,16 +8,20 @@ A real-time Minesweeper web game with **singleplayer** and **multiplayer** modes
 - **Multiplayer** — Create/join rooms with a 6-char code; everyone plays the **same board** and races for the fastest time
 - **Difficulties**:
   | Difficulty | Grid | Mines | Time Limit |
-  |-----------|------|-------|-----------|
+  |-----------|------|-------|-----------:|
   | Easy | 9×9 | 10 | 2 min |
   | Medium | 16×16 | 40 | 10 min |
-- **Leaderboard** — Multiplayer results ranked by completion time
+- **Leaderboard** — Home screen shows three views:
+  - 🎮 **SP Best** — Singleplayer fastest completion times
+  - 👥 **MP Best** — Multiplayer fastest completion times
+  - 🏆 **MP Wins** — Players with the most multiplayer victories
 - **Premium UI** — Dark glassmorphism theme, neon accents, cell animations, confetti on win 🎉
 
 ## Tech Stack
 
 - **Backend**: Node.js, Express, Socket.IO
 - **Frontend**: Vanilla HTML / CSS / JS
+- **Database**: Supabase (PostgreSQL) — optional, falls back to in-memory
 
 ## Getting Started
 
@@ -31,6 +35,25 @@ npm run dev
 # Open in browser
 open http://localhost:3000
 ```
+
+## Supabase Setup (optional)
+
+Leaderboard data persists when connected to Supabase. Without it, scores are stored in-memory and reset on restart.
+
+1. Create a project at [supabase.com](https://supabase.com)
+2. Run `schema.sql` in the Supabase SQL Editor
+3. Copy `.env.example` → `.env` and fill in your credentials:
+   ```
+   SUPABASE_URL=https://your-project.supabase.co
+   SUPABASE_ANON_KEY=your-anon-key
+   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+   ```
+
+## Deploy to Render.com
+
+1. Connect your GitHub repo as a **Web Service**
+2. Set **Build Command**: `npm install` · **Start Command**: `npm start`
+3. Add environment variables: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
 
 ## How to Play
 
@@ -50,6 +73,9 @@ open http://localhost:3000
 ```
 ├── server.js          # Express + Socket.IO server
 ├── game.js            # Core game logic (board gen, reveal, flag, win check)
+├── db.js              # Storage layer (Supabase or in-memory fallback)
+├── schema.sql         # Supabase table & index definitions
+├── .env.example       # Environment variable template
 ├── package.json
 └── public/
     ├── index.html     # Game UI (menu, lobby, board, results)

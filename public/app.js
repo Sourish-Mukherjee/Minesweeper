@@ -54,14 +54,16 @@ const dom = {
   confettiCanvas: $('#confetti-canvas'),
   // Home Leaderboard
   homeLBList:     $('#home-lb-list'),
-  homeLBTabs:     $$('.home-lb-tab'),
+  homeLBModeTabs: $$('[data-lb-mode]'),
+  homeLBDiffTabs: $$('[data-lb-diff]'),
 };
 
 // ── State ────────────────────────────────────────────────────
 let socket = null;
 let gameMode = null;            // 'singleplayer' | 'multiplayer'
 let difficulty = 'easy';
-let lbDifficulty = 'easy';      // which leaderboard tab is active
+let lbDifficulty = 'easy';      // which leaderboard difficulty tab is active
+let lbMode = 'sp';              // 'sp' | 'mp' | 'mp-wins'
 let board = null;               // client-side board for singleplayer
 let rows = 0, cols = 0, totalMines = 0;
 let timeLimit = 0;
@@ -148,21 +150,31 @@ dom.roomCodeInput.addEventListener('keydown', (e) => {
 dom.btnPlayAgain.addEventListener('click', () => {
   cleanup();
   showScreen('menu');
-  fetchLeaderboard(lbDifficulty);
+  fetchLeaderboard();
 });
 
-// Home Leaderboard Tabs
-dom.homeLBTabs.forEach(tab => {
+// Home Leaderboard Mode Tabs
+dom.homeLBModeTabs.forEach(tab => {
   tab.addEventListener('click', () => {
-    dom.homeLBTabs.forEach(t => t.classList.remove('active'));
+    dom.homeLBModeTabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    lbMode = tab.dataset.lbMode;
+    fetchLeaderboard();
+  });
+});
+
+// Home Leaderboard Difficulty Tabs
+dom.homeLBDiffTabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    dom.homeLBDiffTabs.forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     lbDifficulty = tab.dataset.lbDiff;
-    fetchLeaderboard(lbDifficulty);
+    fetchLeaderboard();
   });
 });
 
 // Fetch leaderboard on page load
-fetchLeaderboard('easy');
+fetchLeaderboard();
 
 // Copy code
 dom.btnCopyCode.addEventListener('click', () => {
@@ -711,11 +723,21 @@ function cleanup() {
 //  LEADERBOARD
 // ═══════════════════════════════════════════════════════════════
 
-async function fetchLeaderboard(diff) {
+async function fetchLeaderboard() {
   try {
-    const res = await fetch(`/api/leaderboard/${diff}`);
+    let url;
+    if (lbMode === 'sp') url = `/api/leaderboard/sp/${lbDifficulty}`;
+    else if (lbMode === 'mp') url = `/api/leaderboard/mp/${lbDifficulty}`;
+    else url = `/api/leaderboard/mp-wins/${lbDifficulty}`;
+
+    const res = await fetch(url);
     const data = await res.json();
-    renderHomeLeaderboard(data);
+
+    if (lbMode === 'mp-wins') {
+      renderWinsLeaderboard(data);
+    } else {
+      renderHomeLeaderboard(data);
+    }
   } catch (e) {
     console.error('Failed to fetch leaderboard:', e);
   }
@@ -735,6 +757,25 @@ function renderHomeLeaderboard(entries) {
       <span class="lb-rank">${rankEmojis[i] || (i + 1)}</span>
       <span class="lb-name">${escapeHtml(e.name)}</span>
       <span class="lb-result won">${formatTime(e.time)}</span>
+    `;
+    dom.homeLBList.appendChild(row);
+  });
+}
+
+function renderWinsLeaderboard(entries) {
+  dom.homeLBList.innerHTML = '';
+  if (!entries || entries.length === 0) {
+    dom.homeLBList.innerHTML = '<div class="home-lb-empty">No multiplayer wins yet!</div>';
+    return;
+  }
+  const rankEmojis = ['🥇', '🥈', '🥉'];
+  entries.slice(0, 10).forEach((e, i) => {
+    const row = document.createElement('div');
+    row.className = 'lb-row' + (i === 0 ? ' winner' : '');
+    row.innerHTML = `
+      <span class="lb-rank">${rankEmojis[i] || (i + 1)}</span>
+      <span class="lb-name">${escapeHtml(e.name)}</span>
+      <span class="lb-result won">${e.wins} win${e.wins !== 1 ? 's' : ''}</span>
     `;
     dom.homeLBList.appendChild(row);
   });

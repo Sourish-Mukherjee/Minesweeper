@@ -16,67 +16,109 @@ if (useSupabase) {
 }
 
 // ── In-memory fallback ─────────────────────────────────────────
-const memoryStore = {
-  easy: [],
-  medium: [],
-};
-const MAX_ENTRIES = 50;
+const memoryStore = [];
+const MAX_ENTRIES = 200;
 
 // ── Public API ─────────────────────────────────────────────────
 
 /**
- * Add a leaderboard entry.
- * @param {{ name: string, difficulty: string, time: number, mode: string }} entry
+ * Add a game result entry.
  */
-async function addEntry({ name, difficulty, time, mode }) {
+async function addEntry({ name, difficulty, time, mode, won = true }) {
   if (useSupabase) {
     const { error } = await supabase.from('game_results').insert({
       player_name: name,
       difficulty,
       time_secs: time,
-      won: true,
+      won,
       mode,
     });
     if (error) console.error('Supabase insert error:', error.message);
   } else {
-    const list = memoryStore[difficulty];
-    if (!list) return;
-    list.push({ name, time, mode, date: new Date().toISOString() });
-    list.sort((a, b) => a.time - b.time);
-    if (list.length > MAX_ENTRIES) list.length = MAX_ENTRIES;
+    memoryStore.push({ name, difficulty, time, mode, won, date: new Date().toISOString() });
+    if (memoryStore.length > MAX_ENTRIES) memoryStore.shift();
   }
 }
 
 /**
- * Get top leaderboard entries for a difficulty.
- * @param {string} difficulty - 'easy' or 'medium'
- * @param {number} [limit=50]
- * @returns {Promise<Array<{ name: string, time: number, mode: string, date: string }>>}
+ * Singleplayer best times for a difficulty.
  */
-async function getLeaderboard(difficulty, limit = 50) {
+async function getSPBestTimes(difficulty, limit = 10) {
   if (useSupabase) {
     const { data, error } = await supabase
       .from('game_results')
-      .select('player_name, time_secs, mode, created_at')
+      .select('player_name, time_secs, created_at')
       .eq('difficulty', difficulty)
       .eq('won', true)
+      .eq('mode', 'singleplayer')
       .order('time_secs', { ascending: true })
       .limit(limit);
-
-    if (error) {
-      console.error('Supabase query error:', error.message);
-      return [];
-    }
-
-    return (data || []).map(row => ({
-      name: row.player_name,
-      time: row.time_secs,
-      mode: row.mode,
-      date: row.created_at,
-    }));
+    if (error) { console.error('Supabase query error:', error.message); return []; }
+    return (data || []).map(r => ({ name: r.player_name, time: r.time_secs, date: r.created_at }));
   } else {
-    return (memoryStore[difficulty] || []).slice(0, limit);
+    return memoryStore
+      .filter(e => e.difficulty === difficulty && e.mode === 'singleplayer' && e.won)
+      .sort((a, b) => a.time - b.time)
+      .slice(0, limit)
+      .map(e => ({ name: e.name, time: e.time, date: e.date }));
   }
 }
 
-module.exports = { addEntry, getLeaderboard };
+/**
+ * Multiplayer best times for a difficulty.
+ */
+async function getMPBestTimes(difficulty, limit = 10) {
+  if (useSupabase) {
+    const { data, error } = await supabase
+      .from('game_results')
+      .select('player_name, time_secs, created_at')
+      .eq('difficulty', difficulty)
+      .eq('won', true)
+      .eq('mode', 'multiplayer')
+      .order('time_secs', { ascending: true })
+      .limit(limit);
+    if (error) { console.error('Supabase query error:', error.message); return []; }
+    return (data || []).map(r => ({ name: r.player_name, time: r.time_secs, date: r.created_at }));
+  } else {
+    return memoryStore
+      .filter(e => e.difficulty === difficulty && e.mode === 'multiplayer' && e.won)
+      .sort((a, b) => a.time - b.time)
+      .slice(0, limit)
+      .map(e => ({ name: e.name, time: e.time, date: e.date }));
+  }
+}
+
+/**
+ * Multiplayer most wins for a difficulty.
+ * Returns: [{ name, wins }]
+ */
+async function getMPMostWins(difficulty, limit = 10) {
+  if (useSupabase) {
+    // Use RPC or raw aggregation — Supabase JS doesn't support GROUP BY natively,
+    // so we fetch all wins and aggregate client-side (fine for moderate data).
+    const { data, error } = await supabase
+      .from('game_results')
+      .select('player_name')
+      .eq('difficulty', difficulty)
+      .eq('won', true)
+      .eq('mode', 'multiplayer');
+    if (error) { console.error('Supabase query error:', error.message); return []; }
+    return aggregateWins(data.map(r => r.player_name), limit);
+  } else {
+    const names = memoryStore
+      .filter(e => e.difficulty === difficulty && e.mode === 'multiplayer' && e.won)
+      .map(e => e.name);
+    return aggregateWins(names, limit);
+  }
+}
+
+function aggregateWins(names, limit) {
+  const counts = {};
+  for (const n of names) counts[n] = (counts[n] || 0) + 1;
+  return Object.entries(counts)
+    .map(([name, wins]) => ({ name, wins }))
+    .sort((a, b) => b.wins - a.wins)
+    .slice(0, limit);
+}
+
+module.exports = { addEntry, getSPBestTimes, getMPBestTimes, getMPMostWins };
