@@ -38,6 +38,10 @@ CREATE INDEX IF NOT EXISTS idx_game_results_recent
 -- ── Row Level Security ───────────────────────────────────────
 ALTER TABLE game_results ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies (safe to re-run)
+DROP POLICY IF EXISTS "Public read access" ON game_results;
+DROP POLICY IF EXISTS "Server insert access" ON game_results;
+
 -- Allow anyone to read (public leaderboard)
 CREATE POLICY "Public read access" ON game_results
     FOR SELECT USING (true);
