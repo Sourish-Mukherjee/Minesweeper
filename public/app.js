@@ -73,6 +73,8 @@ const dom = {
   resultTime: document.getElementById('result-time'),
   personalBestInfo: document.getElementById('personal-best-info'),
   resultLeaderboard: document.getElementById('result-leaderboard'),
+  resultLeaderboard: document.getElementById('result-leaderboard'),
+  btnResultWatch: document.getElementById('btn-result-watch'),
   btnPlayAgain: document.getElementById('btn-play-again'),
 
   // leaderboard
@@ -782,6 +784,16 @@ dom.spectatorPlayerSelect.addEventListener('change', () => {
 // ═══════════════════════════════════════════════════════════════
 dom.btnWatchOthers.addEventListener('click', () => {
   socket.emit('start-spectating');
+  // Hide result screen if open, go to game screen
+  showScreen('game-screen');
+  dom.spectateBanner.classList.add('hidden');
+  state.mode = 'spectator'; // Treat as spectator for UI logic
+});
+
+dom.btnResultWatch.addEventListener('click', () => {
+  socket.emit('start-spectating');
+  showScreen('game-screen');
+  state.mode = 'spectator';
 });
 
 socket.on('spectate-ready', ({ players, rows, cols }) => {
@@ -959,6 +971,15 @@ function showResult(won, time, timeout, isNewBest, previousBest, isMultiplayer) 
   }
 
   dom.resultLeaderboard.classList.add('hidden');
+  if (isMultiplayer && state.playerFinished && !won) { // If won, wait for match complete? No, winner can also watch.
+    // Actually, if I won, I might want to watch too.
+    dom.btnResultWatch.classList.remove('hidden');
+  } else if (isMultiplayer && state.playerFinished) {
+      dom.btnResultWatch.classList.remove('hidden');
+  } else {
+    dom.btnResultWatch.classList.add('hidden');
+  }
+
   showScreen('result-screen');
 }
 
