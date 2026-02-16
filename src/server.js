@@ -5,7 +5,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 
-// Load .env if present (for Supabase credentials)
+// Load .env if present (for database credentials)
 try { require('dotenv').config(); } catch (_) { /* dotenv not installed yet */ }
 
 const {
@@ -69,15 +69,29 @@ app.post('/api/leaderboard', async (req, res) => {
     return res.status(400).json({ error: 'Invalid difficulty' });
   }
   try {
-    await db.addEntry({
+    const result = await db.addOrUpdateEntry({
       name: String(name).slice(0, 16),
       difficulty,
       time: Number(time),
       mode,
     });
-    res.json({ ok: true });
+    res.json({ ok: true, ...result });
   } catch (e) {
     console.error('Leaderboard submit error:', e);
+    res.status(500).json({ error: 'Internal error' });
+  }
+});
+
+// Personal best endpoint
+app.get('/api/personal-best/:name/:difficulty/:mode', async (req, res) => {
+  const { name, difficulty, mode } = req.params;
+  if (!['easy', 'medium'].includes(difficulty)) return res.status(400).json({ error: 'Invalid difficulty' });
+  if (!['singleplayer', 'multiplayer'].includes(mode)) return res.status(400).json({ error: 'Invalid mode' });
+  try {
+    const best = await db.getPersonalBest(decodeURIComponent(name), difficulty, mode);
+    res.json({ best });
+  } catch (e) {
+    console.error('Personal best fetch error:', e);
     res.status(500).json({ error: 'Internal error' });
   }
 });
@@ -92,10 +106,44 @@ function generateRoomCode() {
   return rooms.has(code) ? generateRoomCode() : code;
 }
 
+// Helper: compute progress for a player (how many cells revealed vs total)
+function getPlayerProgress(player) {
+  let revealed = 0;
+  let flagged = 0;
+  const total = player.rows * player.cols;
+  for (let r = 0; r < player.rows; r++) {
+    for (let c = 0; c < player.cols; c++) {
+      if (player.board[r][c].revealed) revealed++;
+      if (player.board[r][c].flagged) flagged++;
+    }
+  }
+  return { revealed, flagged, total };
+}
+
+// Helper: broadcast all players' progress to the room
+function broadcastProgress(room, roomCode) {
+  const progressList = [];
+  for (const [sid, player] of room.players) {
+    const { revealed, flagged, total } = getPlayerProgress(player);
+    progressList.push({
+      id: sid,
+      name: player.name,
+      revealed,
+      flagged,
+      total,
+      finished: player.finished,
+      won: player.won,
+      time: player.time,
+    });
+  }
+  io.to(roomCode).emit('opponent-progress', progressList);
+}
+
 // ── Socket.IO events ───────────────────────────────────────────────
 io.on('connection', (socket) => {
   let currentRoom = null;
   let playerName = null;
+  let isSpectator = false;
 
   socket.on('create-room', ({ difficulty, name }) => {
     const code = generateRoomCode();
@@ -110,6 +158,7 @@ io.on('connection', (socket) => {
       config,
       host: socket.id,
       players: new Map(),
+      spectators: new Set(),
       started: false,
       startTime: null,
     };
@@ -172,6 +221,34 @@ io.on('connection', (socket) => {
     io.to(code).emit('player-list', getPlayerList(room));
   });
 
+  // ── Spectator join ─────────────────────────────────────────
+  socket.on('spectate-room', ({ code }) => {
+    const room = rooms.get(code);
+    if (!room) return socket.emit('error-msg', 'Room not found');
+
+    isSpectator = true;
+    currentRoom = code;
+    room.spectators.add(socket.id);
+    socket.join(code);
+
+    const spectatorData = {
+      code,
+      difficulty: room.difficulty,
+      timeLimit: room.config.timeLimit,
+      players: getPlayerList(room),
+      started: room.started,
+      rows: room.config.rows,
+      cols: room.config.cols,
+    };
+
+    socket.emit('spectate-joined', spectatorData);
+
+    // If game already started, send current progress
+    if (room.started) {
+      broadcastProgress(room, code);
+    }
+  });
+
   socket.on('start-game', () => {
     if (!currentRoom) return;
     const room = rooms.get(currentRoom);
@@ -196,6 +273,19 @@ io.on('connection', (socket) => {
         players: getPlayerList(room),
       });
     }
+
+    // Notify spectators
+    for (const sid of room.spectators) {
+      io.to(sid).emit('game-started-spectator', {
+        rows: room.config.rows,
+        cols: room.config.cols,
+        timeLimit: room.config.timeLimit,
+        players: getPlayerList(room),
+      });
+    }
+
+    // Initial progress broadcast
+    broadcastProgress(room, currentRoom);
   });
 
   socket.on('reveal', ({ row, col }) => {
@@ -221,6 +311,7 @@ io.on('connection', (socket) => {
       });
 
       io.to(currentRoom).emit('player-update', getPlayerList(room));
+      broadcastProgress(room, currentRoom);
       checkAllFinished(room);
       return;
     }
@@ -230,22 +321,26 @@ io.on('connection', (socket) => {
       player.won = true;
       player.time = (Date.now() - player.startTime) / 1000;
 
-      // Record to leaderboard
-      db.addEntry({
+      // Record to leaderboard (async, non-blocking)
+      db.addOrUpdateEntry({
         name: player.name,
         difficulty: room.difficulty,
         time: player.time,
         mode: 'multiplayer',
-      });
-
-      const view = getClientView(player.board, player.rows, player.cols, true);
-      socket.emit('game-over', {
-        won: true,
-        board: view,
-        time: player.time,
+      }).then(bestResult => {
+        // Send personal best info along with game-over
+        const view = getClientView(player.board, player.rows, player.cols, true);
+        socket.emit('game-over', {
+          won: true,
+          board: view,
+          time: player.time,
+          isNewBest: bestResult.isNewBest,
+          previousBest: bestResult.previousBest,
+        });
       });
 
       io.to(currentRoom).emit('player-update', getPlayerList(room));
+      broadcastProgress(room, currentRoom);
       checkAllFinished(room);
       return;
     }
@@ -253,6 +348,9 @@ io.on('connection', (socket) => {
     socket.emit('reveal-result', {
       cells: result.revealedCells,
     });
+
+    // Broadcast progress after reveal
+    broadcastProgress(room, currentRoom);
   });
 
   socket.on('flag', ({ row, col }) => {
@@ -265,6 +363,7 @@ io.on('connection', (socket) => {
     const result = flagCell(player.board, row, col);
     if (result.changed) {
       socket.emit('flag-result', { row, col, flagged: result.flagged });
+      broadcastProgress(room, currentRoom);
     }
   });
 
@@ -288,7 +387,34 @@ io.on('connection', (socket) => {
     });
 
     io.to(currentRoom).emit('player-update', getPlayerList(room));
+    broadcastProgress(room, currentRoom);
     checkAllFinished(room);
+  });
+
+  // ── Chat ───────────────────────────────────────────────────
+  let lastChatTime = 0;
+  socket.on('chat-msg', ({ text }) => {
+    if (!currentRoom || !text) return;
+    const now = Date.now();
+    if (now - lastChatTime < 500) return; // rate limit
+    lastChatTime = now;
+    const safeName = playerName || 'Player';
+    io.to(currentRoom).emit('chat-msg', {
+      name: safeName,
+      text: String(text).slice(0, 200),
+      id: socket.id,
+    });
+  });
+
+  socket.on('reaction', ({ emoji }) => {
+    if (!currentRoom || !emoji) return;
+    const ALLOWED = ['😱', '💀', '🎉', '😤', '🔥', '👀', '😂', '💪'];
+    if (!ALLOWED.includes(emoji)) return;
+    socket.to(currentRoom).emit('reaction', {
+      name: playerName || 'Player',
+      emoji,
+      id: socket.id,
+    });
   });
 
   socket.on('disconnect', () => {
@@ -296,15 +422,22 @@ io.on('connection', (socket) => {
     const room = rooms.get(currentRoom);
     if (!room) return;
 
-    room.players.delete(socket.id);
-    if (room.players.size === 0) {
-      rooms.delete(currentRoom);
+    if (isSpectator) {
+      room.spectators.delete(socket.id);
     } else {
-      // Transfer host if needed
-      if (room.host === socket.id) {
-        room.host = room.players.keys().next().value;
+      room.players.delete(socket.id);
+      if (room.players.size === 0 && room.spectators.size === 0) {
+        rooms.delete(currentRoom);
+      } else if (room.players.size === 0) {
+        // Only spectators left, clean up
+        rooms.delete(currentRoom);
+      } else {
+        // Transfer host if needed
+        if (room.host === socket.id) {
+          room.host = room.players.keys().next().value;
+        }
+        io.to(currentRoom).emit('player-list', getPlayerList(room));
       }
-      io.to(currentRoom).emit('player-list', getPlayerList(room));
     }
   });
 });

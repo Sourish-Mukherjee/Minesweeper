@@ -1,96 +1,85 @@
 # 💣 Minesweeper
 
-A real-time Minesweeper web game with **singleplayer** and **multiplayer** modes, built with Node.js.
+A real-time Minesweeper web game with **singleplayer** and **multiplayer** modes, built with Node.js, Express, and Socket.IO.
 
-## Features
+## ✨ Features
 
+### Core Gameplay
 - **Singleplayer** — Classic Minesweeper with flood-fill reveal, flagging, and countdown timer
-- **Multiplayer** — Create/join rooms with a 6-char code; everyone plays the **same board** and races for the fastest time
-- **Difficulties**:
-  | Difficulty | Grid | Mines | Time Limit |
-  |-----------|------|-------|-----------:|
-  | Easy | 9×9 | 10 | 2 min |
-  | Medium | 16×16 | 40 | 10 min |
-- **Leaderboard** — Home screen shows three views:
-  - 🎮 **SP Best** — Singleplayer fastest completion times
-  - 👥 **MP Best** — Multiplayer fastest completion times
-  - 🏆 **MP Wins** — Players with the most multiplayer victories
-- **Premium UI** — Dark glassmorphism theme, neon accents, cell animations, confetti on win 🎉
+- **Multiplayer** — Create/join rooms with a 6-char code; everyone plays the same board and races for the fastest time
+- **Difficulties**: Easy (9×9, 10 mines, 2 min) and Medium (16×16, 40 mines, 10 min)
 
-## Tech Stack
+### Multiplayer Features
+- **Live Opponent Progress** — See opponents' reveal progress in real-time with progress bars
+- **Spectator Mode** — Join any room as a spectator to watch all players' progress
+- **Chat System** — Text chat in the lobby + emoji reactions during gameplay (😱 💀 🎉 😤 🔥 👀)
 
-- **Backend**: Node.js, Express, Socket.IO
-- **Frontend**: Vanilla HTML / CSS / JS
-- **Database**: Supabase (PostgreSQL) — optional, falls back to in-memory
+### Visual & Audio
+- **4 Themes** — Midnight (default), Neon, Ocean, and Retro — persisted across sessions
+- **Sound Effects** — Synthesized Web Audio API sounds: click, reveal, flag, explosion, win, timer tick
+- **Animated Mine Explosions** — Chain-reaction BFS explosion spreading outward from the detonated mine
+- **Confetti** — Canvas particle celebration on wins
 
-## Getting Started
+### Leaderboard & Records
+- **Smart Leaderboard** — Only keeps each player's best time per difficulty/mode
+- **Personal Best Tracking** — Shows "Previous Best → New Best!" or "First Win!" after each game
+- **Mandatory Name** — Ensures all players are identified for a fair leaderboard
+
+## 📁 Project Structure
+
+```
+├── public/             # Frontend (served as static files)
+│   ├── index.html      # App shell with all screens
+│   ├── app.js          # Client logic, SFX, themes, game engine
+│   └── style.css       # Full CSS with 4 theme variants
+├── src/                # Backend
+│   ├── server.js       # Express + Socket.IO server
+│   ├── game.js         # Minesweeper game logic (shared)
+│   └── db.js           # Storage layer (Supabase or in-memory)
+├── package.json
+└── README.md
+```
+
+## 🚀 Quick Start
 
 ```bash
 # Install dependencies
 npm install
 
-# Start the server (with hot reload)
+# Start the server
+npm start
+
+# Or with auto-reload during development
 npm run dev
-
-# Open in browser
-open http://localhost:3000
 ```
 
-## Supabase Setup (optional)
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-Leaderboard data persists when connected to Supabase. Without it, scores are stored in-memory and reset on restart.
+## 💾 Database (optional)
 
-1. Create a project at [supabase.com](https://supabase.com)
-2. Run `db/schema.sql` in the Supabase SQL Editor
-3. Copy `.env.example` → `.env` and fill in your credentials:
-   ```
-   SUPABASE_URL=https://your-project.supabase.co
-   SUPABASE_ANON_KEY=your-anon-key
-   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-   ```
+By default, the leaderboard uses in-memory storage. To persist data, configure your database credentials in a `.env` file:
 
-## Deploy to Render.com
-
-1. Connect your GitHub repo as a **Web Service**
-2. Set:
-   - **Build Command**: `npm install`
-   - **Start Command**: `npm start`
-3. Add environment variables (optional, for persistent leaderboard):
-   - `SUPABASE_URL`
-   - `SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY`
-
-## How to Play
-
-### Singleplayer
-1. Enter your name, pick a difficulty, and click **Singleplayer**
-2. **Left-click** to reveal a cell · **Right-click** to flag
-3. Reveal all non-mine cells before time runs out!
-
-### Multiplayer
-1. **Player 1**: Click **Create Room** → share the 6-char room code
-2. **Player 2+**: Click **Join Room** → enter the code
-3. Host clicks **Start Game** → everyone plays the same board
-4. Fastest solver wins! 🏆
-
-## Project Structure
-
-```
-├── src/
-│   ├── server.js      # Express + Socket.IO server
-│   ├── game.js        # Core game logic (board gen, reveal, flag, win check)
-│   └── db.js          # Storage layer (Supabase or in-memory fallback)
-├── public/
-│   ├── index.html     # Game UI (menu, lobby, board, results)
-│   ├── style.css      # Dark glassmorphism theme
-│   └── app.js         # Client-side game logic & Socket.IO integration
-├── db/
-│   └── schema.sql     # Supabase table & index definitions
-├── .env.example       # Environment variable template
-├── package.json
-└── README.md
+```env
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-key
 ```
 
-## License
+See `schema.sql` for the database schema.
 
-MIT
+## 🌐 Deployment
+
+Deploy to any Node.js hosting platform (Railway, Render, Fly.io, Heroku, etc.):
+
+1. Push to a Git repository
+2. Connect to your hosting provider
+3. Set the start command to `npm start`
+4. Optionally set database environment variables
+
+The app runs on the port specified by `PORT` env variable (default: 3000).
+
+## 🛠 Tech Stack
+
+- **Backend**: Node.js, Express, Socket.IO
+- **Frontend**: Vanilla JS, CSS3 with custom properties
+- **Audio**: Web Audio API (no external sound files)
+- **Database**: Supabase (optional) or in-memory fallback

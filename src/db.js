@@ -17,26 +17,101 @@ if (useSupabase) {
 
 // ── In-memory fallback ─────────────────────────────────────────
 const memoryStore = [];
-const MAX_ENTRIES = 200;
+const MAX_ENTRIES = 500;
 
 // ── Public API ─────────────────────────────────────────────────
 
 /**
- * Add a game result entry.
+ * Add or update a game result — only keeps the best (fastest) time
+ * per player/difficulty/mode combination.
+ * Returns { isNewBest: boolean, previousBest: number|null }
  */
-async function addEntry({ name, difficulty, time, mode, won = true }) {
+async function addOrUpdateEntry({ name, difficulty, time, mode, won = true }) {
+  if (!won) return { isNewBest: false, previousBest: null };
+
   if (useSupabase) {
+    // Check existing best for this player/difficulty/mode
+    const { data: existing } = await supabase
+      .from('game_results')
+      .select('id, time_secs')
+      .eq('player_name', name)
+      .eq('difficulty', difficulty)
+      .eq('mode', mode)
+      .eq('won', true)
+      .order('time_secs', { ascending: true })
+      .limit(1);
+
+    const previousBest = existing?.[0]?.time_secs ?? null;
+
+    if (previousBest !== null && time >= previousBest) {
+      // Not a new best — don't insert
+      return { isNewBest: false, previousBest };
+    }
+
+    // Insert new best
     const { error } = await supabase.from('game_results').insert({
       player_name: name,
       difficulty,
       time_secs: time,
-      won,
+      won: true,
       mode,
     });
     if (error) console.error('Supabase insert error:', error.message);
+
+    // Remove older entries for this player/difficulty/mode (keep only the new best)
+    if (previousBest !== null && existing[0]?.id) {
+      await supabase
+        .from('game_results')
+        .delete()
+        .eq('id', existing[0].id);
+    }
+
+    return { isNewBest: true, previousBest };
   } else {
-    memoryStore.push({ name, difficulty, time, mode, won, date: new Date().toISOString() });
+    // In-memory
+    const existingIdx = memoryStore.findIndex(
+      e => e.name === name && e.difficulty === difficulty && e.mode === mode && e.won
+    );
+
+    if (existingIdx >= 0) {
+      const previousBest = memoryStore[existingIdx].time;
+      if (time >= previousBest) {
+        return { isNewBest: false, previousBest };
+      }
+      // Replace with better time
+      memoryStore[existingIdx].time = time;
+      memoryStore[existingIdx].date = new Date().toISOString();
+      return { isNewBest: true, previousBest };
+    }
+
+    // Brand new entry
+    memoryStore.push({ name, difficulty, time, mode, won: true, date: new Date().toISOString() });
     if (memoryStore.length > MAX_ENTRIES) memoryStore.shift();
+    return { isNewBest: true, previousBest: null };
+  }
+}
+
+/**
+ * Get a player's personal best time for a difficulty + mode.
+ * Returns time in seconds or null.
+ */
+async function getPersonalBest(name, difficulty, mode) {
+  if (useSupabase) {
+    const { data } = await supabase
+      .from('game_results')
+      .select('time_secs')
+      .eq('player_name', name)
+      .eq('difficulty', difficulty)
+      .eq('mode', mode)
+      .eq('won', true)
+      .order('time_secs', { ascending: true })
+      .limit(1);
+    return data?.[0]?.time_secs ?? null;
+  } else {
+    const entries = memoryStore
+      .filter(e => e.name === name && e.difficulty === difficulty && e.mode === mode && e.won)
+      .sort((a, b) => a.time - b.time);
+    return entries[0]?.time ?? null;
   }
 }
 
@@ -94,8 +169,6 @@ async function getMPBestTimes(difficulty, limit = 10) {
  */
 async function getMPMostWins(difficulty, limit = 10) {
   if (useSupabase) {
-    // Use RPC or raw aggregation — Supabase JS doesn't support GROUP BY natively,
-    // so we fetch all wins and aggregate client-side (fine for moderate data).
     const { data, error } = await supabase
       .from('game_results')
       .select('player_name')
@@ -121,4 +194,4 @@ function aggregateWins(names, limit) {
     .slice(0, limit);
 }
 
-module.exports = { addEntry, getSPBestTimes, getMPBestTimes, getMPMostWins };
+module.exports = { addOrUpdateEntry, getPersonalBest, getSPBestTimes, getMPBestTimes, getMPMostWins };

@@ -1,5 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════
    MINESWEEPER — Client-side Application
+   Features: SP/MP, themes, sound, opponent progress, spectator,
+   chat/reactions, animated explosions, personal bests
    ═══════════════════════════════════════════════════════════════ */
 
 // ── Constants ────────────────────────────────────────────────
@@ -13,22 +15,27 @@ const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
 const screens = {
-  menu:   $('#menu-screen'),
-  lobby:  $('#lobby-screen'),
-  game:   $('#game-screen'),
-  result: $('#result-screen'),
+  menu:      $('#menu-screen'),
+  lobby:     $('#lobby-screen'),
+  game:      $('#game-screen'),
+  spectator: $('#spectator-screen'),
+  result:    $('#result-screen'),
 };
 
 const dom = {
   playerName:     $('#player-name'),
+  nameError:      $('#name-error'),
   diffBtns:       $$('.select-btn'),
   btnSingle:      $('#btn-singleplayer'),
   btnCreate:      $('#btn-create-room'),
   btnJoin:        $('#btn-join-room'),
   joinModal:      $('#join-modal'),
+  joinTabs:       $$('.join-tab'),
   roomCodeInput:  $('#room-code-input'),
   btnJoinConfirm: $('#btn-join-confirm'),
   btnJoinCancel:  $('#btn-join-cancel'),
+  // Theme
+  themeBtns:      $$('.theme-swatch'),
   // Lobby
   lobbyRoomCode:  $('#lobby-room-code'),
   lobbyDiff:      $('#lobby-difficulty'),
@@ -37,6 +44,9 @@ const dom = {
   btnStartGame:   $('#btn-start-game'),
   lobbyWaiting:   $('#lobby-waiting'),
   btnCopyCode:    $('#btn-copy-code'),
+  chatMessages:   $('#chat-messages'),
+  chatInput:      $('#chat-input'),
+  btnChatSend:    $('#btn-chat-send'),
   // Game
   mineCount:      $('#mine-count'),
   timer:          $('#timer'),
@@ -44,10 +54,20 @@ const dom = {
   boardContainer: $('#board-container'),
   mpSidebar:      $('#mp-sidebar'),
   mpPlayerList:   $('#mp-player-list'),
+  btnSoundToggle: $('#btn-sound-toggle'),
+  reactionBar:    $('#reaction-bar'),
+  floatingReactions: $('#floating-reactions'),
+  // Spectator
+  spectatorRoomCode: $('#spectator-room-code'),
+  spectatorBoards:   $('#spectator-boards'),
+  spectatorChatMsgs: $('#spectator-chat-messages'),
+  spectatorChatInput:$('#spectator-chat-input'),
+  btnSpectatorChat:  $('#btn-spectator-chat-send'),
   // Result
   resultIcon:     $('#result-icon'),
   resultTitle:    $('#result-title'),
   resultTime:     $('#result-time'),
+  personalBestInfo: $('#personal-best-info'),
   resultLB:       $('#result-leaderboard'),
   btnPlayAgain:   $('#btn-play-again'),
   // Confetti
@@ -62,9 +82,9 @@ const dom = {
 let socket = null;
 let gameMode = null;            // 'singleplayer' | 'multiplayer'
 let difficulty = 'easy';
-let lbDifficulty = 'easy';      // which leaderboard difficulty tab is active
-let lbMode = 'sp';              // 'sp' | 'mp' | 'mp-wins'
-let board = null;               // client-side board for singleplayer
+let lbDifficulty = 'easy';
+let lbMode = 'sp';
+let board = null;
 let rows = 0, cols = 0, totalMines = 0;
 let timeLimit = 0;
 let timeRemaining = 0;
@@ -73,6 +93,8 @@ let flagsPlaced = 0;
 let gameActive = false;
 let firstClick = true;
 let startTimestamp = null;
+let isSpectator = false;
+let joinMode = 'player'; // 'player' | 'spectator'
 
 // ── Seeded PRNG (same as server) ─────────────────────────────
 function seededRandom(seed) {
@@ -86,6 +108,155 @@ function seededRandom(seed) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  SOUND EFFECTS (Web Audio API)
+// ═══════════════════════════════════════════════════════════════
+
+const SFX = (() => {
+  let ctx = null;
+  let muted = localStorage.getItem('sfx-muted') === 'true';
+
+  function getCtx() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    return ctx;
+  }
+
+  function play(fn) {
+    if (muted) return;
+    try { fn(getCtx()); } catch (_) { /* audio not available */ }
+  }
+
+  return {
+    get muted() { return muted; },
+    toggle() {
+      muted = !muted;
+      localStorage.setItem('sfx-muted', muted);
+      return muted;
+    },
+
+    click() {
+      play(ctx => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain).connect(ctx.destination);
+        osc.frequency.setValueAtTime(600, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.1);
+      });
+    },
+
+    reveal() {
+      play(ctx => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain).connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.15);
+      });
+    },
+
+    flag() {
+      play(ctx => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain).connect(ctx.destination);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(1000, ctx.currentTime);
+        osc.frequency.setValueAtTime(700, ctx.currentTime + 0.05);
+        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.12);
+      });
+    },
+
+    explosion() {
+      play(ctx => {
+        const bufferSize = ctx.sampleRate * 0.4;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2);
+        }
+        const noise = ctx.createBufferSource();
+        noise.buffer = buffer;
+        const gain = ctx.createGain();
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(400, ctx.currentTime);
+        noise.connect(filter).connect(gain).connect(ctx.destination);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+        noise.start(ctx.currentTime);
+        noise.stop(ctx.currentTime + 0.4);
+      });
+    },
+
+    win() {
+      play(ctx => {
+        const notes = [523, 659, 784, 1047];
+        notes.forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain).connect(ctx.destination);
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.12);
+          gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.12);
+          gain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + i * 0.12 + 0.05);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.3);
+          osc.start(ctx.currentTime + i * 0.12);
+          osc.stop(ctx.currentTime + i * 0.12 + 0.3);
+        });
+      });
+    },
+
+    tick() {
+      play(ctx => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain).connect(ctx.destination);
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(200, ctx.currentTime);
+        gain.gain.setValueAtTime(0.04, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.05);
+      });
+    },
+  };
+})();
+
+// ═══════════════════════════════════════════════════════════════
+//  THEME SYSTEM
+// ═══════════════════════════════════════════════════════════════
+
+function initTheme() {
+  const saved = localStorage.getItem('theme') || 'midnight';
+  document.documentElement.setAttribute('data-theme', saved);
+  dom.themeBtns.forEach(b => {
+    b.classList.toggle('active', b.dataset.theme === saved);
+  });
+}
+
+dom.themeBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const theme = btn.dataset.theme;
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    dom.themeBtns.forEach(b => b.classList.toggle('active', b === btn));
+  });
+});
+
+initTheme();
+
+// ═══════════════════════════════════════════════════════════════
 //  SCREEN NAVIGATION
 // ═══════════════════════════════════════════════════════════════
 
@@ -95,8 +266,39 @@ function showScreen(name) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  NAME VALIDATION
+// ═══════════════════════════════════════════════════════════════
+
+function validateName() {
+  const name = dom.playerName.value.trim();
+  if (!name) {
+    dom.nameError.classList.remove('hidden');
+    dom.playerName.classList.add('input-error');
+    dom.playerName.focus();
+    return false;
+  }
+  dom.nameError.classList.add('hidden');
+  dom.playerName.classList.remove('input-error');
+  return true;
+}
+
+dom.playerName.addEventListener('input', () => {
+  if (dom.playerName.value.trim()) {
+    dom.nameError.classList.add('hidden');
+    dom.playerName.classList.remove('input-error');
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
 //  MENU SCREEN
 // ═══════════════════════════════════════════════════════════════
+
+// Sound toggle
+dom.btnSoundToggle.textContent = SFX.muted ? '🔇' : '🔊';
+dom.btnSoundToggle.addEventListener('click', () => {
+  const muted = SFX.toggle();
+  dom.btnSoundToggle.textContent = muted ? '🔇' : '🔊';
+});
 
 // Difficulty selection
 dom.diffBtns.forEach(btn => {
@@ -109,15 +311,17 @@ dom.diffBtns.forEach(btn => {
 
 // Singleplayer
 dom.btnSingle.addEventListener('click', () => {
+  if (!validateName()) return;
   gameMode = 'singleplayer';
   startSingleplayer();
 });
 
 // Create Room
 dom.btnCreate.addEventListener('click', () => {
+  if (!validateName()) return;
   gameMode = 'multiplayer';
   connectSocket();
-  const name = dom.playerName.value.trim() || 'Player';
+  const name = dom.playerName.value.trim();
   socket.emit('create-room', { difficulty, name });
 });
 
@@ -126,6 +330,17 @@ dom.btnJoin.addEventListener('click', () => {
   dom.joinModal.classList.remove('hidden');
   dom.roomCodeInput.value = '';
   dom.roomCodeInput.focus();
+  joinMode = 'player';
+  dom.joinTabs.forEach(t => t.classList.toggle('active', t.dataset.joinMode === 'player'));
+});
+
+// Join tabs (player/spectator)
+dom.joinTabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    dom.joinTabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    joinMode = tab.dataset.joinMode;
+  });
 });
 
 dom.btnJoinCancel.addEventListener('click', () => {
@@ -135,10 +350,18 @@ dom.btnJoinCancel.addEventListener('click', () => {
 dom.btnJoinConfirm.addEventListener('click', () => {
   const code = dom.roomCodeInput.value.trim().toUpperCase();
   if (code.length !== 6) return;
-  gameMode = 'multiplayer';
-  connectSocket();
-  const name = dom.playerName.value.trim() || 'Player';
-  socket.emit('join-room', { code, name });
+
+  if (joinMode === 'spectator') {
+    isSpectator = true;
+    connectSocket();
+    socket.emit('spectate-room', { code });
+  } else {
+    if (!validateName()) return;
+    gameMode = 'multiplayer';
+    connectSocket();
+    const name = dom.playerName.value.trim();
+    socket.emit('join-room', { code, name });
+  }
   dom.joinModal.classList.add('hidden');
 });
 
@@ -199,18 +422,16 @@ function startSingleplayer() {
   firstClick = true;
   startTimestamp = null;
 
-  // Generate board
   const seed = Date.now();
   board = generateBoardClient(rows, cols, totalMines, seed);
 
   dom.mineCount.textContent = totalMines;
   dom.flagCount.textContent = '0';
   dom.mpSidebar.classList.add('hidden');
+  dom.reactionBar.classList.add('hidden');
   updateTimerDisplay();
   renderBoard();
   showScreen('game');
-
-  // Timer starts on first click
 }
 
 function generateBoardClient(r, c, mines, seed) {
@@ -226,10 +447,7 @@ function generateBoardClient(r, c, mines, seed) {
   while (placed < mines) {
     const ri = Math.floor(rand() * r);
     const ci = Math.floor(rand() * c);
-    if (!b[ri][ci].mine) {
-      b[ri][ci].mine = true;
-      placed++;
-    }
+    if (!b[ri][ci].mine) { b[ri][ci].mine = true; placed++; }
   }
   for (let i = 0; i < r; i++) {
     for (let j = 0; j < c; j++) {
@@ -255,6 +473,11 @@ function startTimer() {
     timeRemaining = Math.max(0, timeLimit - elapsed);
     updateTimerDisplay();
 
+    // Tick sound at 10 seconds
+    if (timeRemaining <= 10 && timeRemaining > 0 && Math.floor(timeRemaining * 10) % 10 === 0) {
+      SFX.tick();
+    }
+
     if (timeRemaining <= 0) {
       clearInterval(timerInterval);
       timerInterval = null;
@@ -263,6 +486,7 @@ function startTimer() {
       if (gameMode === 'multiplayer' && socket) {
         socket.emit('timeout');
       } else {
+        SFX.explosion();
         showResult(false, timeLimit, true);
       }
     }
@@ -341,7 +565,6 @@ function handleClick(r, c) {
 
   if (gameMode === 'singleplayer') {
     if (firstClick) {
-      // Ensure first click is safe
       ensureSafeFirstClick(r, c);
       firstClick = false;
       startTimer();
@@ -350,21 +573,23 @@ function handleClick(r, c) {
     const cell = board[r][c];
     if (cell.revealed || cell.flagged) return;
 
+    SFX.click();
+
     if (cell.mine) {
       cell.revealed = true;
       gameActive = false;
       clearInterval(timerInterval);
       timerInterval = null;
-      revealAllMines();
-      const cellEl = getCellEl(r, c);
-      cellEl.classList.add('exploded');
+      SFX.explosion();
+      animateExplosionChain(r, c);
       const elapsed = (Date.now() - startTimestamp) / 1000;
-      setTimeout(() => showResult(false, elapsed), 600);
+      setTimeout(() => showResult(false, elapsed), 1200);
       return;
     }
 
     // Flood fill
     floodFill(r, c);
+    SFX.reveal();
 
     // Check win
     if (checkWinClient()) {
@@ -372,9 +597,10 @@ function handleClick(r, c) {
       clearInterval(timerInterval);
       timerInterval = null;
       const elapsed = (Date.now() - startTimestamp) / 1000;
+      SFX.win();
 
       // Submit score to leaderboard
-      const pName = dom.playerName.value.trim() || 'Player';
+      const pName = dom.playerName.value.trim();
       submitScore(pName, difficulty, elapsed, 'singleplayer');
 
       showResult(true, elapsed);
@@ -385,6 +611,7 @@ function handleClick(r, c) {
       firstClick = false;
       startTimer();
     }
+    SFX.click();
     socket.emit('reveal', { row: r, col: c });
   }
 }
@@ -400,6 +627,7 @@ function handleRightClick(r, c) {
     dom.flagCount.textContent = flagsPlaced;
     const cellEl = getCellEl(r, c);
     applyCellState(cellEl, cell);
+    SFX.flag();
   } else {
     socket.emit('flag', { row: r, col: c });
   }
@@ -407,7 +635,6 @@ function handleRightClick(r, c) {
 
 function ensureSafeFirstClick(r, c) {
   if (!board[r][c].mine) return;
-  // Move the mine somewhere else
   board[r][c].mine = false;
   for (let i = 0; i < rows; i++) {
     for (let j = 0; j < cols; j++) {
@@ -465,16 +692,47 @@ function floodFill(r, c) {
   }
 }
 
-function revealAllMines() {
+// ═══════════════════════════════════════════════════════════════
+//  ANIMATED MINE EXPLOSION CHAIN
+// ═══════════════════════════════════════════════════════════════
+
+function animateExplosionChain(startR, startC) {
+  // BFS from the exploded cell — mines reveal in waves
+  const minePositions = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      if (board[r][c].mine) {
-        board[r][c].revealed = true;
-        const cellEl = getCellEl(r, c);
-        applyCellState(cellEl, board[r][c]);
+      if (board[r][c].mine && !(r === startR && c === startC)) {
+        minePositions.push({ r, c });
       }
     }
   }
+
+  // Sort by distance from start
+  minePositions.sort((a, b) => {
+    const dA = Math.abs(a.r - startR) + Math.abs(a.c - startC);
+    const dB = Math.abs(b.r - startR) + Math.abs(b.c - startC);
+    return dA - dB;
+  });
+
+  // Mark the exploded cell immediately
+  const startEl = getCellEl(startR, startC);
+  if (startEl) {
+    board[startR][startC].revealed = true;
+    applyCellState(startEl, board[startR][startC]);
+    startEl.classList.add('exploded', 'shockwave');
+  }
+
+  // Animate remaining mines with staggered delays
+  minePositions.forEach((pos, i) => {
+    setTimeout(() => {
+      board[pos.r][pos.c].revealed = true;
+      const cellEl = getCellEl(pos.r, pos.c);
+      if (cellEl) {
+        applyCellState(cellEl, board[pos.r][pos.c]);
+        cellEl.classList.add('mine-chain', 'shockwave');
+      }
+    }, 80 + i * 60);
+  });
 }
 
 function checkWinClient() {
@@ -524,10 +782,32 @@ function connectSocket() {
     dom.mineCount.textContent = totalMines;
     dom.flagCount.textContent = '0';
     dom.mpSidebar.classList.remove('hidden');
+    dom.reactionBar.classList.remove('hidden');
     renderMPPlayers(players);
     updateTimerDisplay();
     renderBoard(boardView);
     showScreen('game');
+  });
+
+  // ── Spectator ────────────────────────────────────────────
+  socket.on('spectate-joined', ({ code, difficulty: diff, players, started, rows: r, cols: c }) => {
+    difficulty = diff;
+    dom.spectatorRoomCode.textContent = code;
+    showScreen('spectator');
+    renderSpectatorBoards(players, r, c);
+  });
+
+  socket.on('game-started-spectator', ({ rows: r, cols: c, players }) => {
+    renderSpectatorBoards(players, r, c);
+  });
+
+  // ── Opponent progress ────────────────────────────────────
+  socket.on('opponent-progress', (progressList) => {
+    if (isSpectator) {
+      updateSpectatorProgress(progressList);
+    } else {
+      renderMPPlayersWithProgress(progressList);
+    }
   });
 
   socket.on('reveal-result', ({ cells }) => {
@@ -540,6 +820,7 @@ function connectSocket() {
         if (cellEl) applyCellState(cellEl, board[c.r][c.c]);
       }
     }
+    SFX.reveal();
   });
 
   socket.on('flag-result', ({ row, col, flagged }) => {
@@ -549,33 +830,40 @@ function connectSocket() {
       dom.flagCount.textContent = Math.max(0, flagsPlaced);
       const cellEl = getCellEl(row, col);
       if (cellEl) applyCellState(cellEl, board[row][col]);
+      SFX.flag();
     }
   });
 
-  socket.on('game-over', ({ won, board: fullBoard, time, explodedCell, timeout }) => {
+  socket.on('game-over', ({ won, board: fullBoard, time, explodedCell, timeout, isNewBest, previousBest }) => {
     gameActive = false;
     clearInterval(timerInterval);
     timerInterval = null;
 
-    // Re-render full board
-    board = fullBoard;
-    renderBoard(fullBoard);
-
     if (explodedCell) {
-      const cellEl = getCellEl(explodedCell.r, explodedCell.c);
-      if (cellEl) cellEl.classList.add('exploded');
+      SFX.explosion();
+      // Animate chain explosion for multiplayer game over
+      board = fullBoard;
+      renderBoard(fullBoard);
+      animateExplosionChainFromBoard(fullBoard, explodedCell.r, explodedCell.c);
+    } else {
+      board = fullBoard;
+      renderBoard(fullBoard);
     }
 
-    // Don't show result yet — wait for match-complete for leaderboard
-    // But show a mini status
     if (!won) {
       dom.resultIcon.textContent = timeout ? '⏱️' : '💥';
       dom.resultTitle.textContent = timeout ? 'Time\'s Up!' : 'Boom!';
     } else {
       dom.resultIcon.textContent = '🏆';
       dom.resultTitle.textContent = 'You Win!';
+      SFX.win();
     }
     dom.resultTime.textContent = `Time: ${formatTime(time)}`;
+
+    // Show personal best info for MP wins
+    if (won && isNewBest !== undefined) {
+      showPersonalBestInfo(isNewBest, previousBest, time);
+    }
   });
 
   socket.on('player-update', (players) => {
@@ -585,6 +873,102 @@ function connectSocket() {
   socket.on('match-complete', ({ leaderboard }) => {
     showMultiplayerResult(leaderboard);
   });
+
+  // ── Chat ─────────────────────────────────────────────────
+  socket.on('chat-msg', ({ name, text }) => {
+    appendChatMessage(name, text);
+  });
+
+  // ── Reactions ────────────────────────────────────────────
+  socket.on('reaction', ({ name, emoji }) => {
+    showFloatingReaction(emoji);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ANIMATED EXPLOSION (from full board — multiplayer)
+// ═══════════════════════════════════════════════════════════════
+
+function animateExplosionChainFromBoard(fullBoard, startR, startC) {
+  const minePositions = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (fullBoard[r][c].mine && !(r === startR && c === startC)) {
+        minePositions.push({ r, c });
+      }
+    }
+  }
+
+  minePositions.sort((a, b) => {
+    const dA = Math.abs(a.r - startR) + Math.abs(a.c - startC);
+    const dB = Math.abs(b.r - startR) + Math.abs(b.c - startC);
+    return dA - dB;
+  });
+
+  const startEl = getCellEl(startR, startC);
+  if (startEl) startEl.classList.add('exploded', 'shockwave');
+
+  minePositions.forEach((pos, i) => {
+    setTimeout(() => {
+      const cellEl = getCellEl(pos.r, pos.c);
+      if (cellEl) cellEl.classList.add('mine-chain', 'shockwave');
+    }, 80 + i * 60);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CHAT
+// ═══════════════════════════════════════════════════════════════
+
+function appendChatMessage(name, text) {
+  // Append to all visible chat panels
+  const containers = [dom.chatMessages, dom.spectatorChatMsgs].filter(Boolean);
+  containers.forEach(container => {
+    const msg = document.createElement('div');
+    msg.className = 'chat-msg';
+    msg.innerHTML = `<span class="chat-name">${escapeHtml(name)}</span><span class="chat-text">${escapeHtml(text)}</span>`;
+    container.appendChild(msg);
+    container.scrollTop = container.scrollHeight;
+    // Keep last 50 messages
+    while (container.children.length > 50) container.removeChild(container.firstChild);
+  });
+}
+
+function sendChat(inputEl) {
+  const text = inputEl.value.trim();
+  if (!text || !socket) return;
+  socket.emit('chat-msg', { text });
+  inputEl.value = '';
+}
+
+dom.btnChatSend.addEventListener('click', () => sendChat(dom.chatInput));
+dom.chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChat(dom.chatInput); });
+dom.btnSpectatorChat.addEventListener('click', () => sendChat(dom.spectatorChatInput));
+dom.spectatorChatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChat(dom.spectatorChatInput); });
+
+// ═══════════════════════════════════════════════════════════════
+//  REACTIONS
+// ═══════════════════════════════════════════════════════════════
+
+$$('.reaction-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (!socket) return;
+    const emoji = btn.dataset.emoji;
+    socket.emit('reaction', { emoji });
+    // Show it locally too
+    showFloatingReaction(emoji);
+    SFX.click();
+  });
+});
+
+function showFloatingReaction(emoji) {
+  const el = document.createElement('div');
+  el.className = 'floating-emoji';
+  el.textContent = emoji;
+  el.style.left = `${30 + Math.random() * 40}%`;
+  el.style.top = `${40 + Math.random() * 30}%`;
+  dom.floatingReactions.appendChild(el);
+  setTimeout(() => el.remove(), 1500);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -604,6 +988,9 @@ function showLobby(code, diff, tl, players, isHost) {
     dom.btnStartGame.classList.add('hidden');
     dom.lobbyWaiting.classList.remove('hidden');
   }
+
+  // Clear chat
+  dom.chatMessages.innerHTML = '';
 
   renderLobbyPlayers(players);
   showScreen('lobby');
@@ -638,10 +1025,93 @@ function renderMPPlayers(players) {
       statusClass = p.won ? 'won' : 'lost';
     }
     div.innerHTML = `
-      <span>${escapeHtml(p.name)}</span>
-      <span class="status ${statusClass}">${statusText}</span>
+      <div class="player-header">
+        <span>${escapeHtml(p.name)}</span>
+        <span class="status ${statusClass}">${statusText}</span>
+      </div>
     `;
     dom.mpPlayerList.appendChild(div);
+  }
+}
+
+// ── Opponent Progress with Mini-boards ──────────────────────
+
+function renderMPPlayersWithProgress(progressList) {
+  dom.mpPlayerList.innerHTML = '';
+  const myId = socket?.id;
+
+  for (const p of progressList) {
+    if (p.id === myId) continue; // skip self
+
+    const div = document.createElement('div');
+    div.className = 'mp-player';
+
+    let statusText = 'Playing…';
+    let statusClass = '';
+    if (p.finished) {
+      statusText = p.won ? `✅ ${formatTime(p.time)}` : '💥 Lost';
+      statusClass = p.won ? 'won' : 'lost';
+    }
+
+    const pct = p.total > 0 ? Math.round((p.revealed / p.total) * 100) : 0;
+
+    div.innerHTML = `
+      <div class="player-header">
+        <span>${escapeHtml(p.name)}</span>
+        <span class="status ${statusClass}">${statusText}</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width: ${pct}%"></div>
+      </div>
+    `;
+    dom.mpPlayerList.appendChild(div);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SPECTATOR VIEW
+// ═══════════════════════════════════════════════════════════════
+
+function renderSpectatorBoards(players, r, c) {
+  dom.spectatorBoards.innerHTML = '';
+  for (const p of players) {
+    const card = document.createElement('div');
+    card.className = 'spectator-card';
+    card.id = `spec-${p.id}`;
+    card.innerHTML = `
+      <h4>${escapeHtml(p.name)}${p.isHost ? ' 👑' : ''}</h4>
+      <div class="mini-board" style="grid-template-columns: repeat(${c}, 5px)" id="mini-${p.id}"></div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-${p.id}" style="width: 0%"></div></div>
+    `;
+
+    // Init mini-board
+    const miniBoard = card.querySelector('.mini-board');
+    for (let i = 0; i < r * c; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'mini-cell mini-hidden';
+      miniBoard.appendChild(cell);
+    }
+
+    dom.spectatorBoards.appendChild(card);
+  }
+}
+
+function updateSpectatorProgress(progressList) {
+  for (const p of progressList) {
+    const progFill = document.getElementById(`prog-${p.id}`);
+    if (progFill) {
+      const pct = p.total > 0 ? Math.round((p.revealed / p.total) * 100) : 0;
+      progFill.style.width = `${pct}%`;
+    }
+
+    // Update card status
+    const card = document.getElementById(`spec-${p.id}`);
+    if (card) {
+      const h4 = card.querySelector('h4');
+      if (p.finished) {
+        h4.innerHTML = `${escapeHtml(p.name)} ${p.won ? '✅' : '💥'}`;
+      }
+    }
   }
 }
 
@@ -660,7 +1130,29 @@ function showResult(won, time, timeout) {
   }
   dom.resultTime.textContent = `Time: ${formatTime(time)}`;
   dom.resultLB.classList.add('hidden');
+  dom.personalBestInfo.classList.add('hidden');
   showScreen('result');
+}
+
+function showPersonalBestInfo(isNewBest, previousBest, currentTime) {
+  dom.personalBestInfo.classList.remove('hidden');
+
+  if (previousBest === null) {
+    // First ever win
+    dom.personalBestInfo.innerHTML = `
+      <div class="pb-first-win">🎉 First Win! Your best time: ${formatTime(currentTime)}</div>
+    `;
+  } else if (isNewBest) {
+    dom.personalBestInfo.innerHTML = `
+      <div class="pb-new-best">🏆 New Personal Best!</div>
+      <div class="pb-previous">Previous: ${formatTime(previousBest)} → Now: ${formatTime(currentTime)}</div>
+    `;
+  } else {
+    dom.personalBestInfo.innerHTML = `
+      <div class="pb-not-best">Your best: ${formatTime(previousBest)}</div>
+      <div class="pb-previous">Current: ${formatTime(currentTime)}</div>
+    `;
+  }
 }
 
 function showMultiplayerResult(leaderboard) {
@@ -707,13 +1199,17 @@ function cleanup() {
   board = null;
   firstClick = true;
   flagsPlaced = 0;
+  isSpectator = false;
   if (socket) {
     socket.disconnect();
     socket = null;
   }
   dom.boardContainer.innerHTML = '';
   dom.mpSidebar.classList.add('hidden');
+  dom.reactionBar.classList.add('hidden');
   dom.resultLB.classList.add('hidden');
+  dom.personalBestInfo.classList.add('hidden');
+  dom.floatingReactions.innerHTML = '';
 
   const timerBox = dom.timer.closest('.timer-box');
   timerBox.classList.remove('warning', 'danger');
@@ -783,11 +1279,16 @@ function renderWinsLeaderboard(entries) {
 
 async function submitScore(name, diff, time, mode) {
   try {
-    await fetch('/api/leaderboard', {
+    const res = await fetch('/api/leaderboard', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, difficulty: diff, time, mode }),
     });
+    const data = await res.json();
+    // Show personal best info for singleplayer
+    if (data.ok) {
+      showPersonalBestInfo(data.isNewBest, data.previousBest, time);
+    }
   } catch (e) {
     console.error('Failed to submit score:', e);
   }

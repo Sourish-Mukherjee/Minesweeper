@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="midnight">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -23,7 +23,9 @@
     <div class="glass-card menu-card">
       <label class="input-label" for="player-name">Your Name</label>
       <input type="text" id="player-name" class="input" placeholder="Enter your name" maxlength="16" autocomplete="off">
-      <label class="input-label" for="difficulty-select">Difficulty</label>
+      <div id="name-error" class="name-error hidden">⚠️ Please enter your name to play</div>
+
+      <label class="input-label">Difficulty</label>
       <div class="select-group">
         <button class="select-btn active" data-diff="easy">
           <span class="diff-icon">🟢</span>
@@ -36,6 +38,28 @@
           <span class="diff-info">16×16 · 40 mines · 10 min</span>
         </button>
       </div>
+
+      <!-- Theme Picker -->
+      <label class="input-label">Theme</label>
+      <div class="theme-picker">
+        <button class="theme-swatch active" data-theme="midnight" title="Midnight">
+          <span class="swatch-color" style="background: linear-gradient(135deg, #0a0e1a, #6c5ce7)"></span>
+          <span class="swatch-label">Midnight</span>
+        </button>
+        <button class="theme-swatch" data-theme="neon" title="Neon">
+          <span class="swatch-color" style="background: linear-gradient(135deg, #0d0d0d, #39ff14)"></span>
+          <span class="swatch-label">Neon</span>
+        </button>
+        <button class="theme-swatch" data-theme="ocean" title="Ocean">
+          <span class="swatch-color" style="background: linear-gradient(135deg, #0a1628, #0ea5e9)"></span>
+          <span class="swatch-label">Ocean</span>
+        </button>
+        <button class="theme-swatch" data-theme="retro" title="Retro">
+          <span class="swatch-color" style="background: linear-gradient(135deg, #2d1b00, #f59e0b)"></span>
+          <span class="swatch-label">Retro</span>
+        </button>
+      </div>
+
       <div class="menu-actions">
         <button id="btn-singleplayer" class="btn btn-primary">
           <span>🎮</span> Singleplayer
@@ -66,6 +90,10 @@
     <div id="join-modal" class="modal hidden">
       <div class="glass-card modal-card">
         <h2>Join Room</h2>
+        <div class="join-tabs">
+          <button class="join-tab active" data-join-mode="player">🎮 Play</button>
+          <button class="join-tab" data-join-mode="spectator">👁️ Spectate</button>
+        </div>
         <input type="text" id="room-code-input" class="input" placeholder="Enter 6-char code" maxlength="6" autocomplete="off">
         <div class="modal-actions">
           <button id="btn-join-confirm" class="btn btn-primary">Join</button>
@@ -89,6 +117,16 @@
         <span id="lobby-time" class="badge">2:00</span>
       </div>
       <div id="lobby-players" class="player-list"></div>
+
+      <!-- Chat in lobby -->
+      <div class="chat-panel">
+        <div id="chat-messages" class="chat-messages"></div>
+        <div class="chat-input-row">
+          <input type="text" id="chat-input" class="input chat-input" placeholder="Say something…" maxlength="200" autocomplete="off">
+          <button id="btn-chat-send" class="btn btn-primary btn-sm">↑</button>
+        </div>
+      </div>
+
       <button id="btn-start-game" class="btn btn-primary btn-lg hidden">🚀 Start Game</button>
       <p id="lobby-waiting" class="subtle-text">Waiting for host to start…</p>
     </div>
@@ -109,11 +147,44 @@
         <span class="stat-icon">🚩</span>
         <span id="flag-count" class="stat-value">0</span>
       </div>
+      <button id="btn-sound-toggle" class="btn btn-ghost btn-sm sound-toggle" title="Toggle Sound">🔊</button>
     </div>
-    <div id="board-container" class="board-container"></div>
-    <div id="mp-sidebar" class="mp-sidebar hidden">
-      <h3>Players</h3>
-      <div id="mp-player-list" class="mp-player-list"></div>
+
+    <!-- Reaction bar (multiplayer) -->
+    <div id="reaction-bar" class="reaction-bar hidden">
+      <button class="reaction-btn" data-emoji="😱">😱</button>
+      <button class="reaction-btn" data-emoji="💀">💀</button>
+      <button class="reaction-btn" data-emoji="🎉">🎉</button>
+      <button class="reaction-btn" data-emoji="😤">😤</button>
+      <button class="reaction-btn" data-emoji="🔥">🔥</button>
+      <button class="reaction-btn" data-emoji="👀">👀</button>
+    </div>
+
+    <div class="game-layout">
+      <div id="board-container" class="board-container"></div>
+      <div id="mp-sidebar" class="mp-sidebar hidden">
+        <h3>Players</h3>
+        <div id="mp-player-list" class="mp-player-list"></div>
+      </div>
+    </div>
+
+    <!-- Floating reactions container -->
+    <div id="floating-reactions" class="floating-reactions"></div>
+  </div>
+
+  <!-- ═══════════════════ SPECTATOR SCREEN ═══════════════════ -->
+  <div id="spectator-screen" class="screen">
+    <div class="spectator-header">
+      <span class="spectator-badge">👁️ SPECTATING</span>
+      <span id="spectator-room-code" class="code"></span>
+    </div>
+    <div id="spectator-boards" class="spectator-boards"></div>
+    <div id="spectator-chat" class="chat-panel spectator-chat">
+      <div id="spectator-chat-messages" class="chat-messages"></div>
+      <div class="chat-input-row">
+        <input type="text" id="spectator-chat-input" class="input chat-input" placeholder="Say something…" maxlength="200" autocomplete="off">
+        <button id="btn-spectator-chat-send" class="btn btn-primary btn-sm">↑</button>
+      </div>
     </div>
   </div>
 
@@ -123,6 +194,7 @@
       <div id="result-icon" class="result-icon">🏆</div>
       <h2 id="result-title">You Win!</h2>
       <p id="result-time" class="result-time">Time: 1:23</p>
+      <div id="personal-best-info" class="personal-best-info hidden"></div>
       <div id="result-leaderboard" class="leaderboard hidden"></div>
       <button id="btn-play-again" class="btn btn-primary btn-lg">🔄 Play Again</button>
     </div>
