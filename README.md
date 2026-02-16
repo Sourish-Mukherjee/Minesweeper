@@ -52,8 +52,13 @@ Leaderboard data persists when connected to Supabase. Without it, scores are sto
 ## Deploy to Render.com
 
 1. Connect your GitHub repo as a **Web Service**
-2. Set **Build Command**: `npm install` · **Start Command**: `npm start`
-3. Add environment variables: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+2. Set:
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm start`
+3. Add environment variables (optional, for persistent leaderboard):
+   - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
 
 ## How to Play
 
