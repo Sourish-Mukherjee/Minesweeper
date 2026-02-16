@@ -1,116 +1,115 @@
-/* ═══════════════════════════════════════════════════════════════
-   MINESWEEPER — Client-side Application
-   Features: SP/MP, themes, sound, opponent progress, spectator,
-   chat/reactions, animated explosions, personal bests
-   ═══════════════════════════════════════════════════════════════ */
+// app.js — Minesweeper client
 
-// ── Constants ────────────────────────────────────────────────
-const DIFFICULTIES = {
-  easy:   { rows: 9,  cols: 9,  mines: 10, timeLimit: 120 },
-  medium: { rows: 16, cols: 16, mines: 40, timeLimit: 600 },
-};
-
-// ── DOM References ───────────────────────────────────────────
-const $ = (sel) => document.querySelector(sel);
-const $$ = (sel) => document.querySelectorAll(sel);
-
-const screens = {
-  menu:      $('#menu-screen'),
-  lobby:     $('#lobby-screen'),
-  game:      $('#game-screen'),
-  spectator: $('#spectator-screen'),
-  result:    $('#result-screen'),
-};
-
+// ═══════════════════════════════════════════════════════════════
+// DOM Elements
+// ═══════════════════════════════════════════════════════════════
 const dom = {
-  playerName:     $('#player-name'),
-  nameError:      $('#name-error'),
-  diffBtns:       $$('.select-btn'),
-  btnSingle:      $('#btn-singleplayer'),
-  btnCreate:      $('#btn-create-room'),
-  btnJoin:        $('#btn-join-room'),
-  joinModal:      $('#join-modal'),
-  joinTabs:       $$('.join-tab'),
-  roomCodeInput:  $('#room-code-input'),
-  btnJoinConfirm: $('#btn-join-confirm'),
-  btnJoinCancel:  $('#btn-join-cancel'),
-  // Theme
-  themeBtns:      $$('.theme-swatch'),
-  // Lobby
-  lobbyRoomCode:  $('#lobby-room-code'),
-  lobbyDiff:      $('#lobby-difficulty'),
-  lobbyTime:      $('#lobby-time'),
-  lobbyPlayers:   $('#lobby-players'),
-  btnStartGame:   $('#btn-start-game'),
-  lobbyWaiting:   $('#lobby-waiting'),
-  btnCopyCode:    $('#btn-copy-code'),
-  chatMessages:   $('#chat-messages'),
-  chatInput:      $('#chat-input'),
-  btnChatSend:    $('#btn-chat-send'),
-  // Game
-  mineCount:      $('#mine-count'),
-  timer:          $('#timer'),
-  flagCount:      $('#flag-count'),
-  boardContainer: $('#board-container'),
-  mpSidebar:      $('#mp-sidebar'),
-  mpPlayerList:   $('#mp-player-list'),
-  btnSoundToggle: $('#btn-sound-toggle'),
-  reactionBar:    $('#reaction-bar'),
-  floatingReactions: $('#floating-reactions'),
-  // Spectator
-  spectatorRoomCode: $('#spectator-room-code'),
-  spectatorBoards:   $('#spectator-boards'),
-  spectatorChatMsgs: $('#spectator-chat-messages'),
-  spectatorChatInput:$('#spectator-chat-input'),
-  btnSpectatorChat:  $('#btn-spectator-chat-send'),
-  // Result
-  resultIcon:     $('#result-icon'),
-  resultTitle:    $('#result-title'),
-  resultTime:     $('#result-time'),
-  personalBestInfo: $('#personal-best-info'),
-  resultLB:       $('#result-leaderboard'),
-  btnPlayAgain:   $('#btn-play-again'),
-  // Confetti
-  confettiCanvas: $('#confetti-canvas'),
-  // Home Leaderboard
-  homeLBList:     $('#home-lb-list'),
-  homeLBModeTabs: $$('[data-lb-mode]'),
-  homeLBDiffTabs: $$('[data-lb-diff]'),
+  // screens
+  menuScreen: document.getElementById('menu-screen'),
+  lobbyScreen: document.getElementById('lobby-screen'),
+  gameScreen: document.getElementById('game-screen'),
+  spectatorScreen: document.getElementById('spectator-screen'),
+  resultScreen: document.getElementById('result-screen'),
+
+  // menu
+  playerName: document.getElementById('player-name'),
+  nameError: document.getElementById('name-error'),
+  btnSingleplayer: document.getElementById('btn-singleplayer'),
+  btnCreateRoom: document.getElementById('btn-create-room'),
+  btnJoinRoom: document.getElementById('btn-join-room'),
+  joinModal: document.getElementById('join-modal'),
+  roomCodeInput: document.getElementById('room-code-input'),
+  btnJoinConfirm: document.getElementById('btn-join-confirm'),
+  btnJoinCancel: document.getElementById('btn-join-cancel'),
+
+  // lobby
+  lobbyRoomCode: document.getElementById('lobby-room-code'),
+  lobbyDifficulty: document.getElementById('lobby-difficulty'),
+  lobbyTime: document.getElementById('lobby-time'),
+  lobbyPlayers: document.getElementById('lobby-players'),
+  btnStartGame: document.getElementById('btn-start-game'),
+  lobbyWaiting: document.getElementById('lobby-waiting'),
+  btnCopyCode: document.getElementById('btn-copy-code'),
+
+  // lobby chat
+  chatMessages: document.getElementById('chat-messages'),
+  chatInput: document.getElementById('chat-input'),
+  btnChatSend: document.getElementById('btn-chat-send'),
+
+  // game
+  boardContainer: document.getElementById('board-container'),
+  mineCount: document.getElementById('mine-count'),
+  timer: document.getElementById('timer'),
+  flagCount: document.getElementById('flag-count'),
+  btnSoundToggle: document.getElementById('btn-sound-toggle'),
+
+  // game MP sidebar
+  mpSidebar: document.getElementById('mp-sidebar'),
+  mpPlayerList: document.getElementById('mp-player-list'),
+  watchSection: document.getElementById('watch-section'),
+  watchPlayerSelect: document.getElementById('watch-player-select'),
+  watchedBoardContainer: document.getElementById('watched-board-container'),
+  gameChatMessages: document.getElementById('game-chat-messages'),
+  gameChatInput: document.getElementById('game-chat-input'),
+  btnGameChatSend: document.getElementById('btn-game-chat-send'),
+
+  // spectate banner
+  spectateBanner: document.getElementById('spectate-banner'),
+  btnWatchOthers: document.getElementById('btn-watch-others'),
+
+  // spectator screen
+  spectatorRoomCode: document.getElementById('spectator-room-code'),
+  spectatorPlayerSelect: document.getElementById('spectator-player-select'),
+  spectatorWatchedBoard: document.getElementById('spectator-watched-board'),
+  spectatorPlayerList: document.getElementById('spectator-player-list'),
+  spectatorProgressFill: document.getElementById('spectator-progress-fill'),
+  spectatorChatMessages: document.getElementById('spectator-chat-messages'),
+  spectatorChatInput: document.getElementById('spectator-chat-input'),
+  btnSpectatorChatSend: document.getElementById('btn-spectator-chat-send'),
+
+  // result
+  resultIcon: document.getElementById('result-icon'),
+  resultTitle: document.getElementById('result-title'),
+  resultTime: document.getElementById('result-time'),
+  personalBestInfo: document.getElementById('personal-best-info'),
+  resultLeaderboard: document.getElementById('result-leaderboard'),
+  btnPlayAgain: document.getElementById('btn-play-again'),
+
+  // leaderboard
+  homeLBList: document.getElementById('home-lb-list'),
+
+  // confetti
+  confettiCanvas: document.getElementById('confetti-canvas'),
 };
 
-// ── State ────────────────────────────────────────────────────
-let socket = null;
-let gameMode = null;            // 'singleplayer' | 'multiplayer'
-let difficulty = 'easy';
-let lbDifficulty = 'easy';
-let lbMode = 'sp';
-let board = null;
-let rows = 0, cols = 0, totalMines = 0;
-let timeLimit = 0;
-let timeRemaining = 0;
-let timerInterval = null;
-let flagsPlaced = 0;
-let gameActive = false;
-let firstClick = true;
-let startTimestamp = null;
-let isSpectator = false;
-let joinMode = 'player'; // 'player' | 'spectator'
+// ═══════════════════════════════════════════════════════════════
+// State
+// ═══════════════════════════════════════════════════════════════
+let state = {
+  mode: null,          // 'singleplayer' | 'multiplayer' | 'spectator'
+  difficulty: 'easy',
+  board: null,
+  rows: 0, cols: 0,
+  mines: 0, timeLimit: 0,
+  flags: 0,
+  revealedCount: 0,
+  gameOver: false,
+  timerInterval: null,
+  timeRemaining: 0,
+  roomCode: null,
+  isHost: false,
+  socketId: null,
+  playerFinished: false,
+  currentLBMode: 'sp',
+  currentLBDiff: 'easy',
+};
 
-// ── Seeded PRNG (same as server) ─────────────────────────────
-function seededRandom(seed) {
-  let s = seed | 0;
-  return function () {
-    s = (s + 0x6d2b79f5) | 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+const socket = io();
+socket.on('connect', () => { state.socketId = socket.id; });
 
 // ═══════════════════════════════════════════════════════════════
-//  SOUND EFFECTS (Web Audio API)
+// SFX Manager (Web Audio API)
 // ═══════════════════════════════════════════════════════════════
-
 const SFX = (() => {
   let ctx = null;
   let muted = localStorage.getItem('sfx-muted') === 'true';
@@ -122,7 +121,7 @@ const SFX = (() => {
 
   function play(fn) {
     if (muted) return;
-    try { fn(getCtx()); } catch (_) { /* audio not available */ }
+    try { fn(getCtx()); } catch (e) { /* ignore */ }
   }
 
   return {
@@ -130,145 +129,58 @@ const SFX = (() => {
     toggle() {
       muted = !muted;
       localStorage.setItem('sfx-muted', muted);
-      return muted;
+      dom.btnSoundToggle.textContent = muted ? '🔇' : '🔊';
     },
-
-    click() {
-      play(ctx => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain).connect(ctx.destination);
-        osc.frequency.setValueAtTime(600, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.08);
-        gain.gain.setValueAtTime(0.15, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.1);
-      });
-    },
-
-    reveal() {
-      play(ctx => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain).connect(ctx.destination);
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(800, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.08, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.15);
-      });
-    },
-
-    flag() {
-      play(ctx => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain).connect(ctx.destination);
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(1000, ctx.currentTime);
-        osc.frequency.setValueAtTime(700, ctx.currentTime + 0.05);
-        gain.gain.setValueAtTime(0.12, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.12);
-      });
-    },
-
-    explosion() {
-      play(ctx => {
-        const bufferSize = ctx.sampleRate * 0.4;
-        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) {
-          data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2);
-        }
-        const noise = ctx.createBufferSource();
-        noise.buffer = buffer;
-        const gain = ctx.createGain();
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(400, ctx.currentTime);
-        noise.connect(filter).connect(gain).connect(ctx.destination);
-        gain.gain.setValueAtTime(0.3, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-        noise.start(ctx.currentTime);
-        noise.stop(ctx.currentTime + 0.4);
-      });
-    },
-
-    win() {
-      play(ctx => {
-        const notes = [523, 659, 784, 1047];
-        notes.forEach((freq, i) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.connect(gain).connect(ctx.destination);
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.12);
-          gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.12);
-          gain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + i * 0.12 + 0.05);
-          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.3);
-          osc.start(ctx.currentTime + i * 0.12);
-          osc.stop(ctx.currentTime + i * 0.12 + 0.3);
-        });
-      });
-    },
-
-    tick() {
-      play(ctx => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain).connect(ctx.destination);
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(200, ctx.currentTime);
-        gain.gain.setValueAtTime(0.04, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.05);
-      });
-    },
+    click() { play((c) => { const o = c.createOscillator(); const g = c.createGain(); o.connect(g); g.connect(c.destination); o.frequency.value = 600; g.gain.setValueAtTime(0.08, c.currentTime); g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.08); o.start(c.currentTime); o.stop(c.currentTime + 0.08); }); },
+    reveal() { play((c) => { const o = c.createOscillator(); const g = c.createGain(); o.connect(g); g.connect(c.destination); o.type = 'sine'; o.frequency.setValueAtTime(800, c.currentTime); o.frequency.exponentialRampToValueAtTime(1200, c.currentTime + 0.1); g.gain.setValueAtTime(0.06, c.currentTime); g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.15); o.start(c.currentTime); o.stop(c.currentTime + 0.15); }); },
+    flag() { play((c) => { const o = c.createOscillator(); const g = c.createGain(); o.connect(g); g.connect(c.destination); o.type = 'triangle'; o.frequency.setValueAtTime(500, c.currentTime); o.frequency.exponentialRampToValueAtTime(700, c.currentTime + 0.12); g.gain.setValueAtTime(0.1, c.currentTime); g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.15); o.start(c.currentTime); o.stop(c.currentTime + 0.15); }); },
+    explode() { play((c) => { const bufSize = c.sampleRate * 0.4; const buf = c.createBuffer(1, bufSize, c.sampleRate); const data = buf.getChannelData(0); for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufSize); const n = c.createBufferSource(); const g = c.createGain(); n.buffer = buf; n.connect(g); g.connect(c.destination); g.gain.setValueAtTime(0.3, c.currentTime); g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.4); n.start(c.currentTime); }); },
+    win() { play((c) => { [523, 659, 784, 1047].forEach((f, i) => { const o = c.createOscillator(); const g = c.createGain(); o.connect(g); g.connect(c.destination); o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(0, c.currentTime + i * 0.12); g.gain.linearRampToValueAtTime(0.1, c.currentTime + i * 0.12 + 0.05); g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + i * 0.12 + 0.3); o.start(c.currentTime + i * 0.12); o.stop(c.currentTime + i * 0.12 + 0.3); }); }); },
+    tick() { play((c) => { const o = c.createOscillator(); const g = c.createGain(); o.connect(g); g.connect(c.destination); o.type = 'sine'; o.frequency.value = 440; g.gain.setValueAtTime(0.03, c.currentTime); g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.05); o.start(c.currentTime); o.stop(c.currentTime + 0.05); }); },
   };
 })();
 
-// ═══════════════════════════════════════════════════════════════
-//  THEME SYSTEM
-// ═══════════════════════════════════════════════════════════════
+dom.btnSoundToggle.textContent = SFX.muted ? '🔇' : '🔊';
+dom.btnSoundToggle.addEventListener('click', () => SFX.toggle());
 
-function initTheme() {
-  const saved = localStorage.getItem('theme') || 'midnight';
-  document.documentElement.setAttribute('data-theme', saved);
-  dom.themeBtns.forEach(b => {
-    b.classList.toggle('active', b.dataset.theme === saved);
-  });
-}
-
-dom.themeBtns.forEach(btn => {
+// ═══════════════════════════════════════════════════════════════
+// Theme Manager
+// ═══════════════════════════════════════════════════════════════
+const savedTheme = localStorage.getItem('minesweeper-theme') || 'midnight';
+document.documentElement.setAttribute('data-theme', savedTheme);
+document.querySelectorAll('.theme-swatch').forEach(btn => {
+  if (btn.dataset.theme === savedTheme) btn.classList.add('active');
+  else btn.classList.remove('active');
   btn.addEventListener('click', () => {
-    const theme = btn.dataset.theme;
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-    dom.themeBtns.forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.theme-swatch').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.documentElement.setAttribute('data-theme', btn.dataset.theme);
+    localStorage.setItem('minesweeper-theme', btn.dataset.theme);
   });
 });
 
-initTheme();
-
 // ═══════════════════════════════════════════════════════════════
-//  SCREEN NAVIGATION
+// Screen Navigation
 // ═══════════════════════════════════════════════════════════════
-
-function showScreen(name) {
-  Object.values(screens).forEach(s => s.classList.remove('active'));
-  screens[name].classList.add('active');
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  NAME VALIDATION
+// Difficulty selection
 // ═══════════════════════════════════════════════════════════════
+document.querySelectorAll('.select-btn[data-diff]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.select-btn[data-diff]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.difficulty = btn.dataset.diff;
+  });
+});
 
+// ═══════════════════════════════════════════════════════════════
+// Name Validation
+// ═══════════════════════════════════════════════════════════════
 function validateName() {
   const name = dom.playerName.value.trim();
   if (!name) {
@@ -281,408 +193,204 @@ function validateName() {
   dom.playerName.classList.remove('input-error');
   return true;
 }
-
 dom.playerName.addEventListener('input', () => {
-  if (dom.playerName.value.trim()) {
-    dom.nameError.classList.add('hidden');
-    dom.playerName.classList.remove('input-error');
-  }
+  dom.nameError.classList.add('hidden');
+  dom.playerName.classList.remove('input-error');
 });
 
 // ═══════════════════════════════════════════════════════════════
-//  MENU SCREEN
-// ═══════════════════════════════════════════════════════════════
-
-// Sound toggle
-dom.btnSoundToggle.textContent = SFX.muted ? '🔇' : '🔊';
-dom.btnSoundToggle.addEventListener('click', () => {
-  const muted = SFX.toggle();
-  dom.btnSoundToggle.textContent = muted ? '🔇' : '🔊';
-});
-
-// Difficulty selection
-dom.diffBtns.forEach(btn => {
-  btn.addEventListener('click', () => {
-    dom.diffBtns.forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    difficulty = btn.dataset.diff;
-  });
-});
-
 // Singleplayer
-dom.btnSingle.addEventListener('click', () => {
-  if (!validateName()) return;
-  gameMode = 'singleplayer';
-  startSingleplayer();
-});
-
-// Create Room
-dom.btnCreate.addEventListener('click', () => {
-  if (!validateName()) return;
-  gameMode = 'multiplayer';
-  connectSocket();
-  const name = dom.playerName.value.trim();
-  socket.emit('create-room', { difficulty, name });
-});
-
-// Join Room
-dom.btnJoin.addEventListener('click', () => {
-  dom.joinModal.classList.remove('hidden');
-  dom.roomCodeInput.value = '';
-  dom.roomCodeInput.focus();
-  joinMode = 'player';
-  dom.joinTabs.forEach(t => t.classList.toggle('active', t.dataset.joinMode === 'player'));
-});
-
-// Join tabs (player/spectator)
-dom.joinTabs.forEach(tab => {
-  tab.addEventListener('click', () => {
-    dom.joinTabs.forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    joinMode = tab.dataset.joinMode;
-  });
-});
-
-dom.btnJoinCancel.addEventListener('click', () => {
-  dom.joinModal.classList.add('hidden');
-});
-
-dom.btnJoinConfirm.addEventListener('click', () => {
-  const code = dom.roomCodeInput.value.trim().toUpperCase();
-  if (code.length !== 6) return;
-
-  if (joinMode === 'spectator') {
-    isSpectator = true;
-    connectSocket();
-    socket.emit('spectate-room', { code });
-  } else {
-    if (!validateName()) return;
-    gameMode = 'multiplayer';
-    connectSocket();
-    const name = dom.playerName.value.trim();
-    socket.emit('join-room', { code, name });
-  }
-  dom.joinModal.classList.add('hidden');
-});
-
-dom.roomCodeInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') dom.btnJoinConfirm.click();
-});
-
-// Play Again
-dom.btnPlayAgain.addEventListener('click', () => {
-  cleanup();
-  showScreen('menu');
-  fetchLeaderboard();
-});
-
-// Home Leaderboard Mode Tabs
-dom.homeLBModeTabs.forEach(tab => {
-  tab.addEventListener('click', () => {
-    dom.homeLBModeTabs.forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    lbMode = tab.dataset.lbMode;
-    fetchLeaderboard();
-  });
-});
-
-// Home Leaderboard Difficulty Tabs
-dom.homeLBDiffTabs.forEach(tab => {
-  tab.addEventListener('click', () => {
-    dom.homeLBDiffTabs.forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    lbDifficulty = tab.dataset.lbDiff;
-    fetchLeaderboard();
-  });
-});
-
-// Fetch leaderboard on page load
-fetchLeaderboard();
-
-// Copy code
-dom.btnCopyCode.addEventListener('click', () => {
-  navigator.clipboard.writeText(dom.lobbyRoomCode.textContent);
-  dom.btnCopyCode.textContent = '✅ Copied!';
-  setTimeout(() => { dom.btnCopyCode.textContent = '📋 Copy'; }, 1500);
-});
-
 // ═══════════════════════════════════════════════════════════════
-//  SINGLEPLAYER
-// ═══════════════════════════════════════════════════════════════
+const CONFIGS = { easy: { rows: 9, cols: 9, mines: 10, timeLimit: 120 }, medium: { rows: 16, cols: 16, mines: 40, timeLimit: 600 } };
 
-function startSingleplayer() {
-  const config = DIFFICULTIES[difficulty];
-  rows = config.rows;
-  cols = config.cols;
-  totalMines = config.mines;
-  timeLimit = config.timeLimit;
-  timeRemaining = timeLimit;
-  flagsPlaced = 0;
-  gameActive = true;
-  firstClick = true;
-  startTimestamp = null;
+dom.btnSingleplayer.addEventListener('click', () => {
+  if (!validateName()) return;
+  state.mode = 'singleplayer';
+  const config = CONFIGS[state.difficulty];
+  state.rows = config.rows; state.cols = config.cols;
+  state.mines = config.mines; state.timeLimit = config.timeLimit;
+  state.flags = 0; state.revealedCount = 0; state.gameOver = false;
+  state.playerFinished = false;
 
-  const seed = Date.now();
-  board = generateBoardClient(rows, cols, totalMines, seed);
-
-  dom.mineCount.textContent = totalMines;
-  dom.flagCount.textContent = '0';
-  dom.mpSidebar.classList.add('hidden');
-  dom.reactionBar.classList.add('hidden');
-  updateTimerDisplay();
-  renderBoard();
-  showScreen('game');
-}
-
-function generateBoardClient(r, c, mines, seed) {
-  const rand = seededRandom(seed);
-  const b = [];
-  for (let i = 0; i < r; i++) {
-    b[i] = [];
-    for (let j = 0; j < c; j++) {
-      b[i][j] = { mine: false, revealed: false, flagged: false, adjacentMines: 0 };
+  // Generate client-side board (simplified — mine placement hidden until reveal)
+  state.board = [];
+  for (let r = 0; r < state.rows; r++) {
+    state.board[r] = [];
+    for (let c = 0; c < state.cols; c++) {
+      state.board[r][c] = { revealed: false, mine: false, adjacentMines: 0, flagged: false };
     }
   }
+
+  // Actually place mines using simple random
   let placed = 0;
-  while (placed < mines) {
-    const ri = Math.floor(rand() * r);
-    const ci = Math.floor(rand() * c);
-    if (!b[ri][ci].mine) { b[ri][ci].mine = true; placed++; }
+  while (placed < state.mines) {
+    const r = Math.floor(Math.random() * state.rows);
+    const c = Math.floor(Math.random() * state.cols);
+    if (!state.board[r][c].mine) {
+      state.board[r][c].mine = true;
+      placed++;
+    }
   }
-  for (let i = 0; i < r; i++) {
-    for (let j = 0; j < c; j++) {
-      if (b[i][j].mine) continue;
+  // Compute adjacency
+  for (let r = 0; r < state.rows; r++) {
+    for (let c = 0; c < state.cols; c++) {
+      if (state.board[r][c].mine) continue;
       let count = 0;
       for (let dr = -1; dr <= 1; dr++) {
         for (let dc = -1; dc <= 1; dc++) {
-          const nr = i + dr, nc = j + dc;
-          if (nr >= 0 && nr < r && nc >= 0 && nc < c && b[nr][nc].mine) count++;
+          const nr = r + dr, nc = c + dc;
+          if (nr >= 0 && nr < state.rows && nc >= 0 && nc < state.cols && state.board[nr][nc].mine) count++;
         }
       }
-      b[i][j].adjacentMines = count;
+      state.board[r][c].adjacentMines = count;
     }
   }
-  return b;
-}
 
-function startTimer() {
-  if (timerInterval) return;
-  startTimestamp = Date.now();
-  timerInterval = setInterval(() => {
-    const elapsed = (Date.now() - startTimestamp) / 1000;
-    timeRemaining = Math.max(0, timeLimit - elapsed);
-    updateTimerDisplay();
-
-    // Tick sound at 10 seconds
-    if (timeRemaining <= 10 && timeRemaining > 0 && Math.floor(timeRemaining * 10) % 10 === 0) {
-      SFX.tick();
-    }
-
-    if (timeRemaining <= 0) {
-      clearInterval(timerInterval);
-      timerInterval = null;
-      gameActive = false;
-
-      if (gameMode === 'multiplayer' && socket) {
-        socket.emit('timeout');
-      } else {
-        SFX.explosion();
-        showResult(false, timeLimit, true);
-      }
-    }
-  }, 100);
-}
-
-function updateTimerDisplay() {
-  const mins = Math.floor(timeRemaining / 60);
-  const secs = Math.floor(timeRemaining % 60);
-  dom.timer.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-
-  const timerBox = dom.timer.closest('.timer-box');
-  timerBox.classList.remove('warning', 'danger');
-  if (timeRemaining <= 10) timerBox.classList.add('danger');
-  else if (timeRemaining <= 30) timerBox.classList.add('warning');
-}
+  dom.mpSidebar.classList.add('hidden');
+  dom.spectateBanner.classList.add('hidden');
+  dom.mineCount.textContent = state.mines;
+  dom.flagCount.textContent = '0';
+  renderBoard();
+  startTimer();
+  showScreen('game-screen');
+});
 
 // ═══════════════════════════════════════════════════════════════
-//  BOARD RENDERING
+// Board Rendering
 // ═══════════════════════════════════════════════════════════════
+function renderBoard() {
+  const container = dom.boardContainer;
+  container.innerHTML = '';
+  container.style.gridTemplateColumns = `repeat(${state.cols}, var(--cell-size))`;
 
-function renderBoard(clientBoard) {
-  const b = clientBoard || board;
-  dom.boardContainer.innerHTML = '';
-  dom.boardContainer.style.gridTemplateColumns = `repeat(${cols}, var(--cell-size))`;
-
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
+  for (let r = 0; r < state.rows; r++) {
+    for (let c = 0; c < state.cols; c++) {
       const cell = document.createElement('div');
-      cell.classList.add('cell');
-      cell.dataset.row = r;
-      cell.dataset.col = c;
+      cell.className = 'cell hidden-cell';
+      cell.dataset.r = r;
+      cell.dataset.c = c;
 
-      applyCellState(cell, b[r][c]);
+      cell.addEventListener('click', () => handleCellClick(r, c));
+      cell.addEventListener('contextmenu', (e) => { e.preventDefault(); handleFlag(r, c); });
 
-      cell.addEventListener('click', () => handleClick(r, c));
-      cell.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        handleRightClick(r, c);
-      });
-
-      dom.boardContainer.appendChild(cell);
+      container.appendChild(cell);
     }
   }
 }
 
-function applyCellState(cellEl, data) {
+function updateCellView(r, c) {
+  const cellData = state.board[r][c];
+  const cellEl = dom.boardContainer.children[r * state.cols + c];
+  if (!cellEl) return;
+
   cellEl.className = 'cell';
-  if (data.revealed) {
-    if (data.mine) {
-      cellEl.classList.add('mine-cell');
+
+  if (cellData.revealed) {
+    if (cellData.mine) {
+      cellEl.classList.add('revealed-cell', 'mine-cell');
     } else {
       cellEl.classList.add('revealed-cell');
-      if (data.adjacentMines > 0) {
-        cellEl.textContent = data.adjacentMines;
-        cellEl.classList.add(`num-${data.adjacentMines}`);
+      if (cellData.adjacentMines > 0) {
+        cellEl.textContent = cellData.adjacentMines;
+        cellEl.classList.add(`num-${cellData.adjacentMines}`);
       }
     }
-  } else if (data.flagged) {
+  } else if (cellData.flagged) {
     cellEl.classList.add('hidden-cell', 'flagged');
   } else {
     cellEl.classList.add('hidden-cell');
   }
 }
 
-function getCellEl(r, c) {
-  return dom.boardContainer.querySelector(`[data-row="${r}"][data-col="${c}"]`);
-}
-
 // ═══════════════════════════════════════════════════════════════
-//  GAME ACTIONS
+// Cell Interactions
 // ═══════════════════════════════════════════════════════════════
+function handleCellClick(r, c) {
+  if (state.gameOver) return;
+  const cell = state.board[r][c];
+  if (cell.revealed || cell.flagged) return;
 
-function handleClick(r, c) {
-  if (!gameActive) return;
+  SFX.click();
 
-  if (gameMode === 'singleplayer') {
-    if (firstClick) {
-      ensureSafeFirstClick(r, c);
-      firstClick = false;
-      startTimer();
-    }
-
-    const cell = board[r][c];
-    if (cell.revealed || cell.flagged) return;
-
-    SFX.click();
-
-    if (cell.mine) {
-      cell.revealed = true;
-      gameActive = false;
-      clearInterval(timerInterval);
-      timerInterval = null;
-      SFX.explosion();
-      animateExplosionChain(r, c);
-      const elapsed = (Date.now() - startTimestamp) / 1000;
-      setTimeout(() => showResult(false, elapsed), 1200);
-      return;
-    }
-
-    // Flood fill
-    floodFill(r, c);
-    SFX.reveal();
-
-    // Check win
-    if (checkWinClient()) {
-      gameActive = false;
-      clearInterval(timerInterval);
-      timerInterval = null;
-      const elapsed = (Date.now() - startTimestamp) / 1000;
-      SFX.win();
-
-      // Submit score to leaderboard
-      const pName = dom.playerName.value.trim();
-      submitScore(pName, difficulty, elapsed, 'singleplayer');
-
-      showResult(true, elapsed);
-    }
+  if (state.mode === 'singleplayer') {
+    spReveal(r, c);
   } else {
-    // Multiplayer — send to server
-    if (firstClick) {
-      firstClick = false;
-      startTimer();
-    }
-    SFX.click();
     socket.emit('reveal', { row: r, col: c });
   }
 }
 
-function handleRightClick(r, c) {
-  if (!gameActive) return;
+function handleFlag(r, c) {
+  if (state.gameOver) return;
+  const cell = state.board[r][c];
+  if (cell.revealed) return;
 
-  if (gameMode === 'singleplayer') {
-    const cell = board[r][c];
-    if (cell.revealed) return;
+  if (state.mode === 'singleplayer') {
     cell.flagged = !cell.flagged;
-    flagsPlaced += cell.flagged ? 1 : -1;
-    dom.flagCount.textContent = flagsPlaced;
-    const cellEl = getCellEl(r, c);
-    applyCellState(cellEl, cell);
+    state.flags += cell.flagged ? 1 : -1;
+    dom.flagCount.textContent = state.flags;
+    updateCellView(r, c);
     SFX.flag();
   } else {
     socket.emit('flag', { row: r, col: c });
+    SFX.flag();
   }
 }
 
-function ensureSafeFirstClick(r, c) {
-  if (!board[r][c].mine) return;
-  board[r][c].mine = false;
-  for (let i = 0; i < rows; i++) {
-    for (let j = 0; j < cols; j++) {
-      if (!board[i][j].mine && !(i === r && j === c)) {
-        board[i][j].mine = true;
-        recalcAdjacent();
-        return;
-      }
-    }
+// ── SP reveal (local BFS) ──
+function spReveal(r, c) {
+  const cell = state.board[r][c];
+  if (cell.mine) {
+    state.gameOver = true;
+    cell.revealed = true;
+    clearInterval(state.timerInterval);
+    SFX.explode();
+
+    // Show all mines with chain explosion
+    chainExplosion(r, c);
+    const elapsed = state.timeLimit - state.timeRemaining;
+    setTimeout(() => showResult(false, elapsed), 1200);
+    return;
+  }
+
+  const revealed = bfsReveal(r, c);
+  revealed.forEach(pos => updateCellView(pos.r, pos.c));
+  SFX.reveal();
+
+  // Check win
+  let unrevealed = 0;
+  for (let rr = 0; rr < state.rows; rr++)
+    for (let cc = 0; cc < state.cols; cc++)
+      if (!state.board[rr][cc].mine && !state.board[rr][cc].revealed) unrevealed++;
+
+  if (unrevealed === 0) {
+    state.gameOver = true;
+    clearInterval(state.timerInterval);
+    SFX.win();
+    const elapsed = state.timeLimit - state.timeRemaining;
+    submitScore(elapsed);
+    showResult(true, elapsed);
   }
 }
 
-function recalcAdjacent() {
-  for (let i = 0; i < rows; i++) {
-    for (let j = 0; j < cols; j++) {
-      if (board[i][j].mine) continue;
-      let count = 0;
-      for (let dr = -1; dr <= 1; dr++) {
-        for (let dc = -1; dc <= 1; dc++) {
-          const nr = i + dr, nc = j + dc;
-          if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && board[nr][nc].mine) count++;
-        }
-      }
-      board[i][j].adjacentMines = count;
-    }
-  }
-}
+function bfsReveal(startR, startC) {
+  const revealed = [];
+  const queue = [[startR, startC]];
+  const visited = new Set([`${startR},${startC}`]);
 
-function floodFill(r, c) {
-  const queue = [[r, c]];
-  const visited = new Set([`${r},${c}`]);
-
-  while (queue.length > 0) {
-    const [cr, cc] = queue.shift();
-    const cell = board[cr][cc];
+  while (queue.length) {
+    const [r, c] = queue.shift();
+    const cell = state.board[r][c];
     if (cell.revealed || cell.mine) continue;
     cell.revealed = true;
     cell.flagged = false;
-
-    const cellEl = getCellEl(cr, cc);
-    applyCellState(cellEl, cell);
+    revealed.push({ r, c });
 
     if (cell.adjacentMines === 0) {
       for (let dr = -1; dr <= 1; dr++) {
         for (let dc = -1; dc <= 1; dc++) {
-          const nr = cr + dr, nc = cc + dc;
+          const nr = r + dr, nc = c + dc;
           const key = `${nr},${nc}`;
-          if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !visited.has(key)) {
+          if (nr >= 0 && nr < state.rows && nc >= 0 && nc < state.cols && !visited.has(key)) {
             visited.add(key);
             queue.push([nr, nc]);
           }
@@ -690,671 +398,719 @@ function floodFill(r, c) {
       }
     }
   }
+  return revealed;
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  ANIMATED MINE EXPLOSION CHAIN
+// Chain Explosion Animation
 // ═══════════════════════════════════════════════════════════════
+function chainExplosion(startR, startC) {
+  const mines = [];
+  for (let r = 0; r < state.rows; r++)
+    for (let c = 0; c < state.cols; c++)
+      if (state.board[r][c].mine && !(r === startR && c === startC))
+        mines.push({ r, c });
 
-function animateExplosionChain(startR, startC) {
-  // BFS from the exploded cell — mines reveal in waves
-  const minePositions = [];
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      if (board[r][c].mine && !(r === startR && c === startC)) {
-        minePositions.push({ r, c });
-      }
-    }
-  }
-
-  // Sort by distance from start
-  minePositions.sort((a, b) => {
-    const dA = Math.abs(a.r - startR) + Math.abs(a.c - startC);
-    const dB = Math.abs(b.r - startR) + Math.abs(b.c - startC);
-    return dA - dB;
+  // BFS from exploded cell, ordered by Manhattan distance
+  mines.sort((a, b) => {
+    const da = Math.abs(a.r - startR) + Math.abs(a.c - startC);
+    const db = Math.abs(b.r - startR) + Math.abs(b.c - startC);
+    return da - db;
   });
 
-  // Mark the exploded cell immediately
-  const startEl = getCellEl(startR, startC);
-  if (startEl) {
-    board[startR][startC].revealed = true;
-    applyCellState(startEl, board[startR][startC]);
-    startEl.classList.add('exploded', 'shockwave');
+  // Show exploded cell immediately
+  const explodedEl = dom.boardContainer.children[startR * state.cols + startC];
+  if (explodedEl) {
+    explodedEl.className = 'cell revealed-cell mine-cell exploded';
   }
 
-  // Animate remaining mines with staggered delays
-  minePositions.forEach((pos, i) => {
+  mines.forEach((m, i) => {
     setTimeout(() => {
-      board[pos.r][pos.c].revealed = true;
-      const cellEl = getCellEl(pos.r, pos.c);
-      if (cellEl) {
-        applyCellState(cellEl, board[pos.r][pos.c]);
-        cellEl.classList.add('mine-chain', 'shockwave');
+      state.board[m.r][m.c].revealed = true;
+      const el = dom.boardContainer.children[m.r * state.cols + m.c];
+      if (el) {
+        el.className = 'cell revealed-cell mine-cell mine-chain shockwave';
       }
-    }, 80 + i * 60);
+    }, 60 + i * 80);
   });
 }
 
-function checkWinClient() {
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      if (!board[r][c].mine && !board[r][c].revealed) return false;
-    }
-  }
-  return true;
-}
-
 // ═══════════════════════════════════════════════════════════════
-//  MULTIPLAYER — SOCKET.IO
+// Timer
 // ═══════════════════════════════════════════════════════════════
+function startTimer() {
+  clearInterval(state.timerInterval);
+  state.timeRemaining = state.timeLimit;
+  updateTimerDisplay();
 
-function connectSocket() {
-  if (socket) return;
-  socket = io();
-
-  socket.on('error-msg', (msg) => {
-    alert(msg);
-  });
-
-  socket.on('room-created', ({ code, difficulty: diff, timeLimit: tl, players }) => {
-    showLobby(code, diff, tl, players, true);
-  });
-
-  socket.on('room-joined', ({ code, difficulty: diff, timeLimit: tl, players }) => {
-    showLobby(code, diff, tl, players, false);
-  });
-
-  socket.on('player-list', (players) => {
-    renderLobbyPlayers(players);
-  });
-
-  socket.on('game-started', ({ board: boardView, rows: r, cols: c, timeLimit: tl, players }) => {
-    rows = r;
-    cols = c;
-    totalMines = DIFFICULTIES[difficulty]?.mines || 10;
-    timeLimit = tl;
-    timeRemaining = tl;
-    flagsPlaced = 0;
-    gameActive = true;
-    firstClick = true;
-    board = boardView;
-
-    dom.mineCount.textContent = totalMines;
-    dom.flagCount.textContent = '0';
-    dom.mpSidebar.classList.remove('hidden');
-    dom.reactionBar.classList.remove('hidden');
-    renderMPPlayers(players);
+  state.timerInterval = setInterval(() => {
+    state.timeRemaining--;
     updateTimerDisplay();
-    renderBoard(boardView);
-    showScreen('game');
-  });
+    if (state.timeRemaining <= 10) SFX.tick();
 
-  // ── Spectator ────────────────────────────────────────────
-  socket.on('spectate-joined', ({ code, difficulty: diff, players, started, rows: r, cols: c }) => {
-    difficulty = diff;
-    dom.spectatorRoomCode.textContent = code;
-    showScreen('spectator');
-    renderSpectatorBoards(players, r, c);
-  });
+    const timerBox = dom.timer.closest('.stat-box');
+    if (state.timeRemaining <= 10) { timerBox.className = 'stat-box timer-box danger'; }
+    else if (state.timeRemaining <= 30) { timerBox.className = 'stat-box timer-box warning'; }
+    else { timerBox.className = 'stat-box timer-box'; }
 
-  socket.on('game-started-spectator', ({ rows: r, cols: c, players }) => {
-    renderSpectatorBoards(players, r, c);
-  });
-
-  // ── Opponent progress ────────────────────────────────────
-  socket.on('opponent-progress', (progressList) => {
-    if (isSpectator) {
-      updateSpectatorProgress(progressList);
-    } else {
-      renderMPPlayersWithProgress(progressList);
+    if (state.timeRemaining <= 0) {
+      clearInterval(state.timerInterval);
+      state.gameOver = true;
+      if (state.mode === 'multiplayer') socket.emit('timeout');
+      else showResult(false, state.timeLimit, true);
     }
-  });
+  }, 1000);
+}
 
-  socket.on('reveal-result', ({ cells }) => {
-    for (const c of cells) {
-      if (board[c.r] && board[c.r][c.c]) {
-        board[c.r][c.c].revealed = true;
-        board[c.r][c.c].adjacentMines = c.adjacentMines;
-        board[c.r][c.c].flagged = false;
-        const cellEl = getCellEl(c.r, c.c);
-        if (cellEl) applyCellState(cellEl, board[c.r][c.c]);
-      }
-    }
-    SFX.reveal();
-  });
+function updateTimerDisplay() {
+  const m = Math.floor(state.timeRemaining / 60);
+  const s = state.timeRemaining % 60;
+  dom.timer.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+}
 
-  socket.on('flag-result', ({ row, col, flagged }) => {
-    if (board[row] && board[row][col]) {
-      board[row][col].flagged = flagged;
-      flagsPlaced += flagged ? 1 : -1;
-      dom.flagCount.textContent = Math.max(0, flagsPlaced);
-      const cellEl = getCellEl(row, col);
-      if (cellEl) applyCellState(cellEl, board[row][col]);
-      SFX.flag();
-    }
-  });
-
-  socket.on('game-over', ({ won, board: fullBoard, time, explodedCell, timeout, isNewBest, previousBest }) => {
-    gameActive = false;
-    clearInterval(timerInterval);
-    timerInterval = null;
-
-    if (explodedCell) {
-      SFX.explosion();
-      // Animate chain explosion for multiplayer game over
-      board = fullBoard;
-      renderBoard(fullBoard);
-      animateExplosionChainFromBoard(fullBoard, explodedCell.r, explodedCell.c);
-    } else {
-      board = fullBoard;
-      renderBoard(fullBoard);
-    }
-
-    if (!won) {
-      dom.resultIcon.textContent = timeout ? '⏱️' : '💥';
-      dom.resultTitle.textContent = timeout ? 'Time\'s Up!' : 'Boom!';
-    } else {
-      dom.resultIcon.textContent = '🏆';
-      dom.resultTitle.textContent = 'You Win!';
-      SFX.win();
-    }
-    dom.resultTime.textContent = `Time: ${formatTime(time)}`;
-
-    // Show personal best info for MP wins
-    if (won && isNewBest !== undefined) {
-      showPersonalBestInfo(isNewBest, previousBest, time);
-    }
-  });
-
-  socket.on('player-update', (players) => {
-    renderMPPlayers(players);
-  });
-
-  socket.on('match-complete', ({ leaderboard }) => {
-    showMultiplayerResult(leaderboard);
-  });
-
-  // ── Chat ─────────────────────────────────────────────────
-  socket.on('chat-msg', ({ name, text }) => {
-    appendChatMessage(name, text);
-  });
-
-  // ── Reactions ────────────────────────────────────────────
-  socket.on('reaction', ({ name, emoji }) => {
-    showFloatingReaction(emoji);
-  });
+function formatTime(secs) {
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  ANIMATED EXPLOSION (from full board — multiplayer)
+// Multiplayer — Create & Join
 // ═══════════════════════════════════════════════════════════════
+dom.btnCreateRoom.addEventListener('click', () => {
+  if (!validateName()) return;
+  const name = dom.playerName.value.trim().slice(0, 16);
+  socket.emit('create-room', { difficulty: state.difficulty, name });
+});
 
-function animateExplosionChainFromBoard(fullBoard, startR, startC) {
-  const minePositions = [];
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      if (fullBoard[r][c].mine && !(r === startR && c === startC)) {
-        minePositions.push({ r, c });
-      }
-    }
-  }
+let joinMode = 'player';
+dom.btnJoinRoom.addEventListener('click', () => {
+  dom.joinModal.classList.remove('hidden');
+  dom.roomCodeInput.value = '';
+  dom.roomCodeInput.focus();
+});
+dom.btnJoinCancel.addEventListener('click', () => dom.joinModal.classList.add('hidden'));
 
-  minePositions.sort((a, b) => {
-    const dA = Math.abs(a.r - startR) + Math.abs(a.c - startC);
-    const dB = Math.abs(b.r - startR) + Math.abs(b.c - startC);
-    return dA - dB;
-  });
-
-  const startEl = getCellEl(startR, startC);
-  if (startEl) startEl.classList.add('exploded', 'shockwave');
-
-  minePositions.forEach((pos, i) => {
-    setTimeout(() => {
-      const cellEl = getCellEl(pos.r, pos.c);
-      if (cellEl) cellEl.classList.add('mine-chain', 'shockwave');
-    }, 80 + i * 60);
-  });
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  CHAT
-// ═══════════════════════════════════════════════════════════════
-
-function appendChatMessage(name, text) {
-  // Append to all visible chat panels
-  const containers = [dom.chatMessages, dom.spectatorChatMsgs].filter(Boolean);
-  containers.forEach(container => {
-    const msg = document.createElement('div');
-    msg.className = 'chat-msg';
-    msg.innerHTML = `<span class="chat-name">${escapeHtml(name)}</span><span class="chat-text">${escapeHtml(text)}</span>`;
-    container.appendChild(msg);
-    container.scrollTop = container.scrollHeight;
-    // Keep last 50 messages
-    while (container.children.length > 50) container.removeChild(container.firstChild);
-  });
-}
-
-function sendChat(inputEl) {
-  const text = inputEl.value.trim();
-  if (!text || !socket) return;
-  socket.emit('chat-msg', { text });
-  inputEl.value = '';
-}
-
-dom.btnChatSend.addEventListener('click', () => sendChat(dom.chatInput));
-dom.chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChat(dom.chatInput); });
-dom.btnSpectatorChat.addEventListener('click', () => sendChat(dom.spectatorChatInput));
-dom.spectatorChatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChat(dom.spectatorChatInput); });
-
-// ═══════════════════════════════════════════════════════════════
-//  REACTIONS
-// ═══════════════════════════════════════════════════════════════
-
-$$('.reaction-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    if (!socket) return;
-    const emoji = btn.dataset.emoji;
-    socket.emit('reaction', { emoji });
-    // Show it locally too
-    showFloatingReaction(emoji);
-    SFX.click();
+document.querySelectorAll('.join-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.join-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    joinMode = tab.dataset.joinMode;
   });
 });
 
-function showFloatingReaction(emoji) {
-  const el = document.createElement('div');
-  el.className = 'floating-emoji';
-  el.textContent = emoji;
-  el.style.left = `${30 + Math.random() * 40}%`;
-  el.style.top = `${40 + Math.random() * 30}%`;
-  dom.floatingReactions.appendChild(el);
-  setTimeout(() => el.remove(), 1500);
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  LOBBY
-// ═══════════════════════════════════════════════════════════════
-
-function showLobby(code, diff, tl, players, isHost) {
-  dom.lobbyRoomCode.textContent = code;
-  dom.lobbyDiff.textContent = diff.charAt(0).toUpperCase() + diff.slice(1);
-  dom.lobbyTime.textContent = formatTime(tl);
-  difficulty = diff;
-
-  if (isHost) {
-    dom.btnStartGame.classList.remove('hidden');
-    dom.lobbyWaiting.classList.add('hidden');
+dom.btnJoinConfirm.addEventListener('click', () => {
+  const code = dom.roomCodeInput.value.trim().toUpperCase();
+  if (!code || code.length !== 6) return;
+  dom.joinModal.classList.add('hidden');
+  if (joinMode === 'spectator') {
+    state.mode = 'spectator';
+    socket.emit('spectate-room', { code });
   } else {
-    dom.btnStartGame.classList.add('hidden');
-    dom.lobbyWaiting.classList.remove('hidden');
+    if (!validateName()) return;
+    const name = dom.playerName.value.trim().slice(0, 16);
+    socket.emit('join-room', { code, name });
   }
-
-  // Clear chat
-  dom.chatMessages.innerHTML = '';
-
-  renderLobbyPlayers(players);
-  showScreen('lobby');
-}
-
-dom.btnStartGame.addEventListener('click', () => {
-  if (socket) socket.emit('start-game');
 });
+
+dom.btnCopyCode.addEventListener('click', () => {
+  navigator.clipboard.writeText(state.roomCode || '');
+  dom.btnCopyCode.textContent = '✅ Copied!';
+  setTimeout(() => dom.btnCopyCode.textContent = '📋 Copy', 2000);
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Socket.IO — Room Events
+// ═══════════════════════════════════════════════════════════════
+socket.on('room-created', ({ code, difficulty, timeLimit, players }) => {
+  state.mode = 'multiplayer';
+  state.roomCode = code;
+  state.isHost = true;
+  dom.lobbyRoomCode.textContent = code;
+  dom.lobbyDifficulty.textContent = difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
+  dom.lobbyTime.textContent = formatTime(timeLimit);
+  dom.btnStartGame.classList.remove('hidden');
+  dom.lobbyWaiting.classList.add('hidden');
+  renderLobbyPlayers(players);
+  clearChat(dom.chatMessages);
+  showScreen('lobby-screen');
+});
+
+socket.on('room-joined', ({ code, difficulty, timeLimit, players }) => {
+  state.mode = 'multiplayer';
+  state.roomCode = code;
+  state.isHost = false;
+  dom.lobbyRoomCode.textContent = code;
+  dom.lobbyDifficulty.textContent = difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
+  dom.lobbyTime.textContent = formatTime(timeLimit);
+  dom.btnStartGame.classList.add('hidden');
+  dom.lobbyWaiting.classList.remove('hidden');
+  renderLobbyPlayers(players);
+  clearChat(dom.chatMessages);
+  showScreen('lobby-screen');
+});
+
+socket.on('player-list', (players) => renderLobbyPlayers(players));
+
+socket.on('error-msg', (msg) => alert(msg));
 
 function renderLobbyPlayers(players) {
   dom.lobbyPlayers.innerHTML = '';
-  for (const p of players) {
-    const item = document.createElement('div');
-    item.className = 'player-item';
-    item.innerHTML = `
-      <span class="player-name">${escapeHtml(p.name)}</span>
-      ${p.isHost ? '<span class="host-badge">👑 Host</span>' : ''}
-    `;
-    dom.lobbyPlayers.appendChild(item);
-  }
+  players.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'player-item';
+    el.innerHTML = `<span class="player-name">${esc(p.name)}</span>${p.isHost ? '<span class="host-badge">👑 Host</span>' : ''}`;
+    dom.lobbyPlayers.appendChild(el);
+  });
 }
 
-function renderMPPlayers(players) {
+dom.btnStartGame.addEventListener('click', () => socket.emit('start-game'));
+
+// ═══════════════════════════════════════════════════════════════
+// Socket.IO — Game Events
+// ═══════════════════════════════════════════════════════════════
+socket.on('game-started', ({ board, rows, cols, timeLimit, players }) => {
+  state.rows = rows; state.cols = cols;
+  state.timeLimit = timeLimit;
+  state.board = board;
+  state.flags = 0; state.revealedCount = 0;
+  state.gameOver = false;
+  state.playerFinished = false;
+
+  // Count mines in board
+  let mines = 0;
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (board[r][c].mine) mines++;
+  state.mines = mines || (state.difficulty === 'easy' ? 10 : 40);
+
+  dom.mineCount.textContent = state.mines;
+  dom.flagCount.textContent = '0';
+  dom.spectateBanner.classList.add('hidden');
+  dom.mpSidebar.classList.remove('hidden');
+  dom.watchSection.classList.add('hidden');
+  clearChat(dom.gameChatMessages);
+  renderBoard();
+  renderBoardFromData(board);
+  startTimer();
+  renderMPPlayerList(players);
+  showScreen('game-screen');
+});
+
+socket.on('reveal-result', ({ cells }) => {
+  cells.forEach(({ r, c, adjacentMines, mine }) => {
+    state.board[r][c].revealed = true;
+    state.board[r][c].adjacentMines = adjacentMines;
+    if (mine) state.board[r][c].mine = true;
+    updateCellView(r, c);
+  });
+  SFX.reveal();
+});
+
+socket.on('flag-result', ({ row, col, flagged }) => {
+  state.board[row][col].flagged = flagged;
+  state.flags += flagged ? 1 : -1;
+  dom.flagCount.textContent = state.flags;
+  updateCellView(row, col);
+});
+
+socket.on('game-over', ({ won, board, time, isNewBest, previousBest, explodedCell, timeout }) => {
+  state.gameOver = true;
+  state.playerFinished = true;
+  clearInterval(state.timerInterval);
+
+  if (board) {
+    state.board = board;
+    if (!won && explodedCell) {
+      chainExplosion(explodedCell.r, explodedCell.c);
+      SFX.explode();
+      setTimeout(() => renderBoardFromData(board), 1000);
+    } else {
+      renderBoardFromData(board);
+    }
+  }
+
+  if (won) {
+    SFX.win();
+    showResult(true, time, false, isNewBest, previousBest, true);
+  } else {
+    showResult(false, time, timeout, undefined, undefined, true);
+  }
+});
+
+socket.on('player-update', (players) => renderMPPlayerList(players));
+socket.on('match-complete', ({ leaderboard }) => {
+  showMatchLeaderboard(leaderboard);
+  if (state.mode === 'spectator') {
+    showScreen('result-screen');
+    dom.resultTitle.textContent = 'Match Finished';
+    dom.resultIcon.textContent = '🏁';
+    dom.resultTime.textContent = '';
+    dom.personalBestInfo.classList.add('hidden');
+    dom.btnPlayAgain.textContent = 'Back to Menu';
+    dom.spectateBanner.classList.add('hidden');
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// MP Player Progress
+// ═══════════════════════════════════════════════════════════════
+socket.on('opponent-progress', (progressList) => {
+  renderMPPlayerListWithProgress(progressList);
+});
+
+function renderMPPlayerList(players) {
   dom.mpPlayerList.innerHTML = '';
-  for (const p of players) {
+  players.forEach(p => {
     const div = document.createElement('div');
     div.className = 'mp-player';
     let statusText = 'Playing…';
     let statusClass = '';
     if (p.finished) {
-      statusText = p.won ? `✅ ${formatTime(p.time)}` : '💥 Lost';
+      statusText = p.won ? `✅ Won — ${formatTime(p.time)}` : '💀 Lost';
       statusClass = p.won ? 'won' : 'lost';
     }
-    div.innerHTML = `
-      <div class="player-header">
-        <span>${escapeHtml(p.name)}</span>
-        <span class="status ${statusClass}">${statusText}</span>
-      </div>
-    `;
+    div.innerHTML = `<div class="player-header"><span>${esc(p.name)}</span><span class="status ${statusClass}">${statusText}</span></div>`;
     dom.mpPlayerList.appendChild(div);
-  }
+  });
 }
 
-// ── Opponent Progress with Mini-boards ──────────────────────
-
-function renderMPPlayersWithProgress(progressList) {
+function renderMPPlayerListWithProgress(progressList) {
   dom.mpPlayerList.innerHTML = '';
-  const myId = socket?.id;
-
-  for (const p of progressList) {
-    if (p.id === myId) continue; // skip self
-
+  progressList.forEach(p => {
     const div = document.createElement('div');
     div.className = 'mp-player';
-
     let statusText = 'Playing…';
     let statusClass = '';
     if (p.finished) {
-      statusText = p.won ? `✅ ${formatTime(p.time)}` : '💥 Lost';
+      statusText = p.won ? `✅ Won — ${formatTime(p.time)}` : '💀 Lost';
       statusClass = p.won ? 'won' : 'lost';
     }
-
-    const pct = p.total > 0 ? Math.round((p.revealed / p.total) * 100) : 0;
-
+    const safeTotal = p.total - (state.mines || 0);
+    const pct = safeTotal > 0 ? Math.min(100, Math.round((p.revealed / safeTotal) * 100)) : 0;
     div.innerHTML = `
-      <div class="player-header">
-        <span>${escapeHtml(p.name)}</span>
-        <span class="status ${statusClass}">${statusText}</span>
-      </div>
-      <div class="progress-bar">
-        <div class="progress-fill" style="width: ${pct}%"></div>
-      </div>
+      <div class="player-header"><span>${esc(p.name)}</span><span class="status ${statusClass}">${statusText}</span></div>
+      <div class="progress-bar"><div class="progress-fill" style="width: ${pct}%"></div></div>
     `;
     dom.mpPlayerList.appendChild(div);
-  }
-}
+  });
 
-// ═══════════════════════════════════════════════════════════════
-//  SPECTATOR VIEW
-// ═══════════════════════════════════════════════════════════════
-
-function renderSpectatorBoards(players, r, c) {
-  dom.spectatorBoards.innerHTML = '';
-  for (const p of players) {
-    const card = document.createElement('div');
-    card.className = 'spectator-card';
-    card.id = `spec-${p.id}`;
-    card.innerHTML = `
-      <h4>${escapeHtml(p.name)}${p.isHost ? ' 👑' : ''}</h4>
-      <div class="mini-board" style="grid-template-columns: repeat(${c}, 5px)" id="mini-${p.id}"></div>
-      <div class="progress-bar"><div class="progress-fill" id="prog-${p.id}" style="width: 0%"></div></div>
-    `;
-
-    // Init mini-board
-    const miniBoard = card.querySelector('.mini-board');
-    for (let i = 0; i < r * c; i++) {
-      const cell = document.createElement('div');
-      cell.className = 'mini-cell mini-hidden';
-      miniBoard.appendChild(cell);
-    }
-
-    dom.spectatorBoards.appendChild(card);
+  // Also update spectator player list if on spectator screen
+  if (state.mode === 'spectator' || state.playerFinished) {
+    updateSpectatorProgress(progressList);
   }
 }
 
 function updateSpectatorProgress(progressList) {
-  for (const p of progressList) {
-    const progFill = document.getElementById(`prog-${p.id}`);
-    if (progFill) {
-      const pct = p.total > 0 ? Math.round((p.revealed / p.total) * 100) : 0;
-      progFill.style.width = `${pct}%`;
-    }
-
-    // Update card status
-    const card = document.getElementById(`spec-${p.id}`);
-    if (card) {
-      const h4 = card.querySelector('h4');
+  // Update spectator screen player list
+  const listEl = state.mode === 'spectator' ? dom.spectatorPlayerList : null;
+  if (listEl) {
+    listEl.innerHTML = '';
+    progressList.forEach(p => {
+      const div = document.createElement('div');
+      div.className = 'mp-player';
+      let statusText = 'Playing…';
+      let statusClass = '';
       if (p.finished) {
-        h4.innerHTML = `${escapeHtml(p.name)} ${p.won ? '✅' : '💥'}`;
+        statusText = p.won ? `✅ ${formatTime(p.time)}` : '💀 Lost';
+        statusClass = p.won ? 'won' : 'lost';
+      }
+      const safeTotal = p.total - (state.mines || 0);
+      const pct = safeTotal > 0 ? Math.min(100, Math.round((p.revealed / safeTotal) * 100)) : 0;
+      div.innerHTML = `
+        <div class="player-header"><span>${esc(p.name)}</span><span class="status ${statusClass}">${statusText}</span></div>
+        <div class="progress-bar"><div class="progress-fill" style="width: ${pct}%"></div></div>
+      `;
+      listEl.appendChild(div);
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Spectator — Join
+// ═══════════════════════════════════════════════════════════════
+socket.on('spectate-joined', ({ code, players, started, rows, cols }) => {
+  state.mode = 'spectator';
+  state.roomCode = code;
+  state.rows = rows; state.cols = cols;
+  dom.spectatorRoomCode.textContent = code;
+
+  populatePlayerSelect(dom.spectatorPlayerSelect, players);
+  renderSpectatorPlayerList(players);
+
+  if (started && players.length > 0) {
+    socket.emit('watch-player', { targetId: players[0].id });
+  }
+  showScreen('spectator-screen');
+});
+
+socket.on('game-started-spectator', ({ rows, cols, timeLimit, players }) => {
+  state.rows = rows; state.cols = cols;
+  populatePlayerSelect(dom.spectatorPlayerSelect, players);
+  renderSpectatorPlayerList(players);
+  if (players.length > 0) {
+    socket.emit('watch-player', { targetId: players[0].id });
+  }
+});
+
+function renderSpectatorPlayerList(players) {
+  dom.spectatorPlayerList.innerHTML = '';
+  players.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'mp-player';
+    let statusText = p.finished ? (p.won ? `✅ ${formatTime(p.time)}` : '💀') : 'Playing…';
+    div.innerHTML = `<div class="player-header"><span>${esc(p.name)}</span><span class="status">${statusText}</span></div>`;
+    dom.spectatorPlayerList.appendChild(div);
+  });
+}
+
+function populatePlayerSelect(selectEl, players) {
+  selectEl.innerHTML = '';
+  players.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.name + (p.finished ? (p.won ? ' ✅' : ' 💀') : '');
+    selectEl.appendChild(opt);
+  });
+}
+
+dom.spectatorPlayerSelect.addEventListener('change', () => {
+  const targetId = dom.spectatorPlayerSelect.value;
+  if (targetId) socket.emit('watch-player', { targetId });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Post-Finish Spectating (from game screen)
+// ═══════════════════════════════════════════════════════════════
+dom.btnWatchOthers.addEventListener('click', () => {
+  socket.emit('start-spectating');
+});
+
+socket.on('spectate-ready', ({ players, rows, cols }) => {
+  state.rows = rows; state.cols = cols;
+  // Filter to only players still playing
+  const activePlayers = players.filter(p => !p.finished);
+  if (activePlayers.length === 0) return;
+
+  // Show the watch section in sidebar
+  dom.watchSection.classList.remove('hidden');
+  populatePlayerSelect(dom.watchPlayerSelect, activePlayers);
+  socket.emit('watch-player', { targetId: activePlayers[0].id });
+});
+
+dom.watchPlayerSelect.addEventListener('change', () => {
+  const targetId = dom.watchPlayerSelect.value;
+  if (targetId) socket.emit('watch-player', { targetId });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Watched Board Update (received from server)
+// ═══════════════════════════════════════════════════════════════
+socket.on('watched-board-update', ({ playerId, name, board, rows, cols, finished, won }) => {
+  // Determine which container to render into
+  const isOnSpectatorScreen = state.mode === 'spectator' && document.getElementById('spectator-screen').classList.contains('active');
+  const container = isOnSpectatorScreen ? dom.spectatorWatchedBoard : dom.watchedBoardContainer;
+
+  renderWatchedBoard(container, board, rows, cols, isOnSpectatorScreen);
+
+  // Update progress bar if spectator
+  if (isOnSpectatorScreen) {
+    let revealed = 0, total = 0;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        total++;
+        if (board[r][c].revealed && !board[r][c].mine) revealed++;
       }
     }
+    const mines = board.flat().filter(c => c.mine).length || 0;
+    const safeTotal = total - mines;
+    const pct = safeTotal > 0 ? Math.min(100, Math.round((revealed / safeTotal) * 100)) : 0;
+    dom.spectatorProgressFill.style.width = pct + '%';
   }
-}
+});
 
-// ═══════════════════════════════════════════════════════════════
-//  RESULT SCREEN
-// ═══════════════════════════════════════════════════════════════
+function renderWatchedBoard(container, board, rows, cols, large) {
+  container.innerHTML = '';
+  const cellSize = large ? 24 : 12;
+  container.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
 
-function showResult(won, time, timeout) {
-  if (won) {
-    dom.resultIcon.textContent = '🏆';
-    dom.resultTitle.textContent = 'You Win!';
-    launchConfetti();
-  } else {
-    dom.resultIcon.textContent = timeout ? '⏱️' : '💥';
-    dom.resultTitle.textContent = timeout ? 'Time\'s Up!' : 'Game Over';
-  }
-  dom.resultTime.textContent = `Time: ${formatTime(time)}`;
-  dom.resultLB.classList.add('hidden');
-  dom.personalBestInfo.classList.add('hidden');
-  showScreen('result');
-}
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = board[r][c];
+      const div = document.createElement('div');
+      div.className = 'watched-cell';
+      div.style.width = cellSize + 'px';
+      div.style.height = cellSize + 'px';
 
-function showPersonalBestInfo(isNewBest, previousBest, currentTime) {
-  dom.personalBestInfo.classList.remove('hidden');
-
-  if (previousBest === null) {
-    // First ever win
-    dom.personalBestInfo.innerHTML = `
-      <div class="pb-first-win">🎉 First Win! Your best time: ${formatTime(currentTime)}</div>
-    `;
-  } else if (isNewBest) {
-    dom.personalBestInfo.innerHTML = `
-      <div class="pb-new-best">🏆 New Personal Best!</div>
-      <div class="pb-previous">Previous: ${formatTime(previousBest)} → Now: ${formatTime(currentTime)}</div>
-    `;
-  } else {
-    dom.personalBestInfo.innerHTML = `
-      <div class="pb-not-best">Your best: ${formatTime(previousBest)}</div>
-      <div class="pb-previous">Current: ${formatTime(currentTime)}</div>
-    `;
-  }
-}
-
-function showMultiplayerResult(leaderboard) {
-  dom.resultLB.classList.remove('hidden');
-  dom.resultLB.innerHTML = '<h3>🏅 Leaderboard</h3>';
-
-  leaderboard.forEach((p, i) => {
-    const row = document.createElement('div');
-    row.className = `lb-row ${i === 0 && p.won ? 'winner' : ''}`;
-    const rankEmojis = ['🥇', '🥈', '🥉'];
-    row.innerHTML = `
-      <span class="lb-rank">${rankEmojis[i] || (i + 1)}</span>
-      <span class="lb-name">${escapeHtml(p.name)}</span>
-      <span class="lb-result ${p.won ? 'won' : 'lost'}">${p.won ? formatTime(p.time) : 'Lost'}</span>
-    `;
-    dom.resultLB.appendChild(row);
-  });
-
-  if (leaderboard[0]?.won) launchConfetti();
-  showScreen('result');
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  UTILITIES
-// ═══════════════════════════════════════════════════════════════
-
-function formatTime(seconds) {
-  if (seconds == null) return '--:--';
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
-
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
-
-function cleanup() {
-  clearInterval(timerInterval);
-  timerInterval = null;
-  gameActive = false;
-  board = null;
-  firstClick = true;
-  flagsPlaced = 0;
-  isSpectator = false;
-  if (socket) {
-    socket.disconnect();
-    socket = null;
-  }
-  dom.boardContainer.innerHTML = '';
-  dom.mpSidebar.classList.add('hidden');
-  dom.reactionBar.classList.add('hidden');
-  dom.resultLB.classList.add('hidden');
-  dom.personalBestInfo.classList.add('hidden');
-  dom.floatingReactions.innerHTML = '';
-
-  const timerBox = dom.timer.closest('.timer-box');
-  timerBox.classList.remove('warning', 'danger');
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  LEADERBOARD
-// ═══════════════════════════════════════════════════════════════
-
-async function fetchLeaderboard() {
-  try {
-    let url;
-    if (lbMode === 'sp') url = `/api/leaderboard/sp/${lbDifficulty}`;
-    else if (lbMode === 'mp') url = `/api/leaderboard/mp/${lbDifficulty}`;
-    else url = `/api/leaderboard/mp-wins/${lbDifficulty}`;
-
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if (lbMode === 'mp-wins') {
-      renderWinsLeaderboard(data);
-    } else {
-      renderHomeLeaderboard(data);
+      if (cell.revealed) {
+        if (cell.mine) {
+          div.classList.add('wc-mine');
+          div.textContent = '💣';
+        } else if (cell.adjacentMines > 0) {
+          div.classList.add('wc-number', `num-${cell.adjacentMines}`);
+          div.textContent = cell.adjacentMines;
+        } else {
+          div.classList.add('wc-revealed');
+        }
+      } else if (cell.flagged) {
+        div.classList.add('wc-flagged');
+        div.textContent = '🚩';
+      } else {
+        div.classList.add('wc-hidden');
+      }
+      container.appendChild(div);
     }
-  } catch (e) {
-    console.error('Failed to fetch leaderboard:', e);
   }
 }
 
-function renderHomeLeaderboard(entries) {
-  dom.homeLBList.innerHTML = '';
-  if (!entries || entries.length === 0) {
-    dom.homeLBList.innerHTML = '<div class="home-lb-empty">No games played yet. Be the first!</div>';
-    return;
+// ═══════════════════════════════════════════════════════════════
+// Render Board from Server Data (update all cells)
+// ═══════════════════════════════════════════════════════════════
+function renderBoardFromData(board) {
+  for (let r = 0; r < state.rows; r++) {
+    for (let c = 0; c < state.cols; c++) {
+      state.board[r][c] = board[r][c];
+      updateCellView(r, c);
+    }
   }
-  const rankEmojis = ['🥇', '🥈', '🥉'];
-  entries.slice(0, 10).forEach((e, i) => {
-    const row = document.createElement('div');
-    row.className = 'lb-row' + (i === 0 ? ' winner' : '');
-    row.innerHTML = `
-      <span class="lb-rank">${rankEmojis[i] || (i + 1)}</span>
-      <span class="lb-name">${escapeHtml(e.name)}</span>
-      <span class="lb-result won">${formatTime(e.time)}</span>
-    `;
-    dom.homeLBList.appendChild(row);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Chat System (shared across lobby, game, spectator)
+// ═══════════════════════════════════════════════════════════════
+function sendChat(inputEl) {
+  const text = inputEl.value.trim();
+  if (!text) return;
+  socket.emit('chat-msg', { text });
+  inputEl.value = '';
+}
+
+function clearChat(container) {
+  container.innerHTML = '';
+}
+
+function appendChatMsg(containers, name, text) {
+  containers.forEach(container => {
+    const div = document.createElement('div');
+    div.className = 'chat-msg';
+    div.innerHTML = `<span class="chat-name">${esc(name)}</span><span class="chat-text">${esc(text)}</span>`;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
   });
 }
 
-function renderWinsLeaderboard(entries) {
-  dom.homeLBList.innerHTML = '';
-  if (!entries || entries.length === 0) {
-    dom.homeLBList.innerHTML = '<div class="home-lb-empty">No multiplayer wins yet!</div>';
-    return;
-  }
-  const rankEmojis = ['🥇', '🥈', '🥉'];
-  entries.slice(0, 10).forEach((e, i) => {
-    const row = document.createElement('div');
-    row.className = 'lb-row' + (i === 0 ? ' winner' : '');
-    row.innerHTML = `
-      <span class="lb-rank">${rankEmojis[i] || (i + 1)}</span>
-      <span class="lb-name">${escapeHtml(e.name)}</span>
-      <span class="lb-result won">${e.wins} win${e.wins !== 1 ? 's' : ''}</span>
-    `;
-    dom.homeLBList.appendChild(row);
-  });
-}
+// Lobby chat
+dom.btnChatSend.addEventListener('click', () => sendChat(dom.chatInput));
+dom.chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChat(dom.chatInput); });
 
-async function submitScore(name, diff, time, mode) {
+// Game chat
+dom.btnGameChatSend.addEventListener('click', () => sendChat(dom.gameChatInput));
+dom.gameChatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChat(dom.gameChatInput); });
+
+// Spectator chat
+dom.btnSpectatorChatSend.addEventListener('click', () => sendChat(dom.spectatorChatInput));
+dom.spectatorChatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChat(dom.spectatorChatInput); });
+
+socket.on('chat-msg', ({ name, text }) => {
+  // Show in all visible chat containers
+  const containers = [dom.chatMessages, dom.gameChatMessages, dom.spectatorChatMessages];
+  appendChatMsg(containers, name, text);
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Result / Score
+// ═══════════════════════════════════════════════════════════════
+async function submitScore(time) {
+  const name = dom.playerName.value.trim().slice(0, 16);
   try {
     const res = await fetch('/api/leaderboard', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, difficulty: diff, time, mode }),
+      body: JSON.stringify({ name, difficulty: state.difficulty, time, mode: state.mode }),
     });
     const data = await res.json();
-    // Show personal best info for singleplayer
-    if (data.ok) {
-      showPersonalBestInfo(data.isNewBest, data.previousBest, time);
-    }
+    return data;
   } catch (e) {
-    console.error('Failed to submit score:', e);
+    console.error('Score submit error:', e);
+    return null;
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-//  CONFETTI 🎉
-// ═══════════════════════════════════════════════════════════════
+function showResult(won, time, timeout, isNewBest, previousBest, isMultiplayer) {
+  clearInterval(state.timerInterval);
 
+  dom.resultIcon.textContent = won ? '🏆' : (timeout ? '⏰' : '💥');
+  dom.resultTitle.textContent = won ? 'You Win!' : (timeout ? 'Time\'s Up!' : 'Game Over');
+  dom.resultTime.textContent = `Time: ${formatTime(time)}`;
+
+  // Show spectate banner for MP if others still playing
+  if (isMultiplayer && state.playerFinished) {
+    dom.spectateBanner.classList.remove('hidden');
+  }
+
+  if (won && state.mode === 'singleplayer') {
+    submitScore(time).then(data => {
+      if (data) showPersonalBestInfo(data.isNewBest, data.previousBest, time);
+    });
+    launchConfetti();
+  } else if (won) {
+    showPersonalBestInfo(isNewBest, previousBest, time);
+    launchConfetti();
+  } else {
+    dom.personalBestInfo.classList.add('hidden');
+  }
+
+  dom.resultLeaderboard.classList.add('hidden');
+  showScreen('result-screen');
+}
+
+function showPersonalBestInfo(isNewBest, previousBest, currentTime) {
+  dom.personalBestInfo.classList.remove('hidden');
+  if (previousBest === null) {
+    dom.personalBestInfo.innerHTML = `<div class="pb-first-win">🎉 First Win! Your best time: ${formatTime(currentTime)}</div>`;
+  } else if (isNewBest) {
+    dom.personalBestInfo.innerHTML = `<div class="pb-new-best">🏆 New Personal Best!</div><div class="pb-previous">Previous: ${formatTime(previousBest)} → Now: ${formatTime(currentTime)}</div>`;
+  } else {
+    dom.personalBestInfo.innerHTML = `<div class="pb-not-best">Your best: ${formatTime(previousBest)}</div><div class="pb-previous">Current: ${formatTime(currentTime)}</div>`;
+  }
+}
+
+function showMatchLeaderboard(leaderboard) {
+  dom.resultLeaderboard.classList.remove('hidden');
+  dom.resultLeaderboard.innerHTML = '<h3>Match Results</h3>';
+  leaderboard.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = `lb-row${p.won ? ' winner' : ''}`;
+    row.innerHTML = `
+      <span class="lb-rank">${i + 1}</span>
+      <span class="lb-name">${esc(p.name)}</span>
+      <span class="lb-result ${p.won ? 'won' : 'lost'}">${p.won ? formatTime(p.time) : '💀'}</span>
+    `;
+    dom.resultLeaderboard.appendChild(row);
+  });
+}
+
+dom.btnPlayAgain.addEventListener('click', () => {
+  state.gameOver = false;
+  state.playerFinished = false;
+  clearInterval(state.timerInterval);
+  dom.spectateBanner.classList.add('hidden');
+  showScreen('menu-screen');
+  loadHomeLeaderboard();
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Home Leaderboard
+// ═══════════════════════════════════════════════════════════════
+document.querySelectorAll('.home-lb-tab[data-lb-mode]').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.home-lb-tab[data-lb-mode]').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    state.currentLBMode = tab.dataset.lbMode;
+    loadHomeLeaderboard();
+  });
+});
+
+document.querySelectorAll('.home-lb-tab[data-lb-diff]').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.home-lb-tab[data-lb-diff]').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    state.currentLBDiff = tab.dataset.lbDiff;
+    loadHomeLeaderboard();
+  });
+});
+
+async function loadHomeLeaderboard() {
+  const mode = state.currentLBMode;
+  const diff = state.currentLBDiff;
+  let url = '';
+  if (mode === 'sp') url = `/api/leaderboard/sp/${diff}`;
+  else if (mode === 'mp') url = `/api/leaderboard/mp/${diff}`;
+  else url = `/api/leaderboard/mp-wins/${diff}`;
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    renderHomeLeaderboard(data, mode);
+  } catch (_) {
+    dom.homeLBList.innerHTML = '<div class="home-lb-empty">Could not load leaderboard.</div>';
+  }
+}
+
+function renderHomeLeaderboard(entries, mode) {
+  if (!entries || entries.length === 0) {
+    dom.homeLBList.innerHTML = '<div class="home-lb-empty">No games played yet. Be the first!</div>';
+    return;
+  }
+  dom.homeLBList.innerHTML = '';
+  entries.forEach((e, i) => {
+    const row = document.createElement('div');
+    row.className = 'lb-row';
+    const medals = ['🥇', '🥈', '🥉'];
+    const rank = i < 3 ? medals[i] : `${i + 1}`;
+    const value = mode === 'mp-wins' ? `${e.wins || e.count || 0} wins` : formatTime(e.time_secs || e.time || 0);
+    row.innerHTML = `<span class="lb-rank">${rank}</span><span class="lb-name">${esc(e.player_name || e.name || 'Unknown')}</span><span class="lb-result">${value}</span>`;
+    dom.homeLBList.appendChild(row);
+  });
+}
+
+// Load leaderboard on page load
+loadHomeLeaderboard();
+
+// ═══════════════════════════════════════════════════════════════
+// Confetti
+// ═══════════════════════════════════════════════════════════════
 function launchConfetti() {
   const canvas = dom.confettiCanvas;
   const ctx = canvas.getContext('2d');
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 
-  const colors = ['#6c5ce7', '#00cec9', '#fdcb6e', '#e17055', '#00b894', '#f472b6', '#60a5fa'];
   const particles = [];
+  const colors = ['#6c5ce7', '#00cec9', '#00b894', '#fdcb6e', '#e17055', '#ff6b6b', '#74b9ff', '#a29bfe'];
 
-  for (let i = 0; i < 150; i++) {
+  for (let i = 0; i < 120; i++) {
     particles.push({
       x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height - canvas.height,
-      w: Math.random() * 10 + 5,
+      y: -10 - Math.random() * canvas.height * 0.5,
+      vx: (Math.random() - 0.5) * 6,
+      vy: Math.random() * 3 + 2,
+      w: Math.random() * 8 + 4,
       h: Math.random() * 6 + 3,
       color: colors[Math.floor(Math.random() * colors.length)],
-      vx: (Math.random() - 0.5) * 4,
-      vy: Math.random() * 3 + 2,
-      rotation: Math.random() * 360,
-      rotationSpeed: (Math.random() - 0.5) * 10,
-      opacity: 1,
+      rotation: Math.random() * Math.PI * 2,
+      rotSpeed: (Math.random() - 0.5) * 0.2,
+      gravity: 0.05 + Math.random() * 0.05,
     });
   }
 
   let frame = 0;
   function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    frame++;
-
-    for (const p of particles) {
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.05;
-      p.rotation += p.rotationSpeed;
-      if (frame > 80) p.opacity -= 0.01;
-
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.rotate((p.rotation * Math.PI) / 180);
-      ctx.globalAlpha = Math.max(0, p.opacity);
-      ctx.fillStyle = p.color;
-      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+    let alive = false;
+    particles.forEach(p => {
+      p.x += p.vx; p.vy += p.gravity; p.y += p.vy;
+      p.rotation += p.rotSpeed;
+      if (p.y < canvas.height + 20) alive = true;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rotation);
+      ctx.fillStyle = p.color; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
       ctx.restore();
-    }
-
-    if (frame < 200) {
-      requestAnimationFrame(animate);
-    } else {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
+    });
+    frame++;
+    if (alive && frame < 300) requestAnimationFrame(animate);
+    else ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
-
   animate();
 }
 
-// Handle window resize for confetti canvas
 window.addEventListener('resize', () => {
   dom.confettiCanvas.width = window.innerWidth;
   dom.confettiCanvas.height = window.innerHeight;
 });
+
+// ═══════════════════════════════════════════════════════════════
+// Utility
+// ═══════════════════════════════════════════════════════════════
+function esc(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}

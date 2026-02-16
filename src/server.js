@@ -139,6 +139,33 @@ function broadcastProgress(room, roomCode) {
   io.to(roomCode).emit('opponent-progress', progressList);
 }
 
+// Helper: send board view of a player to a watcher
+function sendPlayerBoardToWatcher(room, targetId, watcherSid) {
+  const player = room.players.get(targetId);
+  if (!player) return;
+  const view = getClientView(player.board, player.rows, player.cols, player.finished);
+  io.to(watcherSid).emit('watched-board-update', {
+    playerId: targetId,
+    name: player.name,
+    board: view,
+    rows: player.rows,
+    cols: player.cols,
+    finished: player.finished,
+    won: player.won,
+    time: player.time,
+  });
+}
+
+// Helper: send board view to all watchers of a player
+function notifyWatchers(room, playerId) {
+  if (!room.watchers) return;
+  for (const [watcherSid, targetId] of room.watchers) {
+    if (targetId === playerId) {
+      sendPlayerBoardToWatcher(room, playerId, watcherSid);
+    }
+  }
+}
+
 // ── Socket.IO events ───────────────────────────────────────────────
 io.on('connection', (socket) => {
   let currentRoom = null;
@@ -159,6 +186,7 @@ io.on('connection', (socket) => {
       host: socket.id,
       players: new Map(),
       spectators: new Set(),
+      watchers: new Map(), // watcherSid -> targetPlayerId
       started: false,
       startTime: null,
     };
@@ -312,6 +340,7 @@ io.on('connection', (socket) => {
 
       io.to(currentRoom).emit('player-update', getPlayerList(room));
       broadcastProgress(room, currentRoom);
+      notifyWatchers(room, socket.id);
       checkAllFinished(room);
       return;
     }
@@ -341,6 +370,7 @@ io.on('connection', (socket) => {
 
       io.to(currentRoom).emit('player-update', getPlayerList(room));
       broadcastProgress(room, currentRoom);
+      notifyWatchers(room, socket.id);
       checkAllFinished(room);
       return;
     }
@@ -349,8 +379,9 @@ io.on('connection', (socket) => {
       cells: result.revealedCells,
     });
 
-    // Broadcast progress after reveal
+    // Broadcast progress + notify watchers after reveal
     broadcastProgress(room, currentRoom);
+    notifyWatchers(room, socket.id);
   });
 
   socket.on('flag', ({ row, col }) => {
@@ -364,6 +395,7 @@ io.on('connection', (socket) => {
     if (result.changed) {
       socket.emit('flag-result', { row, col, flagged: result.flagged });
       broadcastProgress(room, currentRoom);
+      notifyWatchers(room, socket.id);
     }
   });
 
@@ -406,21 +438,39 @@ io.on('connection', (socket) => {
     });
   });
 
-  socket.on('reaction', ({ emoji }) => {
-    if (!currentRoom || !emoji) return;
-    const ALLOWED = ['😱', '💀', '🎉', '😤', '🔥', '👀', '😂', '💪'];
-    if (!ALLOWED.includes(emoji)) return;
-    socket.to(currentRoom).emit('reaction', {
-      name: playerName || 'Player',
-      emoji,
-      id: socket.id,
+  // ── Watch a specific player (spectator or finished player) ──
+  socket.on('watch-player', ({ targetId }) => {
+    if (!currentRoom) return;
+    const room = rooms.get(currentRoom);
+    if (!room) return;
+    if (!room.watchers) room.watchers = new Map();
+    room.watchers.set(socket.id, targetId);
+    sendPlayerBoardToWatcher(room, targetId, socket.id);
+  });
+
+  // ── Post-finish spectating ─────────────────────────────────
+  socket.on('start-spectating', () => {
+    if (!currentRoom) return;
+    const room = rooms.get(currentRoom);
+    if (!room) return;
+    const player = room.players.get(socket.id);
+    if (!player || !player.finished) return;
+    // Send current player list + progress so they can pick who to watch
+    socket.emit('spectate-ready', {
+      players: getPlayerList(room),
+      rows: room.config.rows,
+      cols: room.config.cols,
     });
+    broadcastProgress(room, currentRoom);
   });
 
   socket.on('disconnect', () => {
     if (!currentRoom) return;
     const room = rooms.get(currentRoom);
     if (!room) return;
+
+    // Remove from watchers
+    if (room.watchers) room.watchers.delete(socket.id);
 
     if (isSpectator) {
       room.spectators.delete(socket.id);
@@ -429,10 +479,8 @@ io.on('connection', (socket) => {
       if (room.players.size === 0 && room.spectators.size === 0) {
         rooms.delete(currentRoom);
       } else if (room.players.size === 0) {
-        // Only spectators left, clean up
         rooms.delete(currentRoom);
       } else {
-        // Transfer host if needed
         if (room.host === socket.id) {
           room.host = room.players.keys().next().value;
         }

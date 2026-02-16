@@ -105,30 +105,31 @@
 
   <!-- ═══════════════════ LOBBY SCREEN ═══════════════════ -->
   <div id="lobby-screen" class="screen">
-    <div class="glass-card lobby-card">
-      <h2>🏠 Game Lobby</h2>
-      <div class="room-code-display">
-        <span class="label">Room Code</span>
-        <span id="lobby-room-code" class="code">------</span>
-        <button id="btn-copy-code" class="btn btn-ghost btn-sm">📋 Copy</button>
+    <div class="lobby-layout">
+      <div class="glass-card lobby-card">
+        <h2>🏠 Game Lobby</h2>
+        <div class="room-code-display">
+          <span class="label">Room Code</span>
+          <span id="lobby-room-code" class="code">------</span>
+          <button id="btn-copy-code" class="btn btn-ghost btn-sm">📋 Copy</button>
+        </div>
+        <div class="lobby-info">
+          <span id="lobby-difficulty" class="badge">Easy</span>
+          <span id="lobby-time" class="badge">2:00</span>
+        </div>
+        <div id="lobby-players" class="player-list"></div>
+        <button id="btn-start-game" class="btn btn-primary btn-lg hidden">🚀 Start Game</button>
+        <p id="lobby-waiting" class="subtle-text">Waiting for host to start…</p>
       </div>
-      <div class="lobby-info">
-        <span id="lobby-difficulty" class="badge">Easy</span>
-        <span id="lobby-time" class="badge">2:00</span>
-      </div>
-      <div id="lobby-players" class="player-list"></div>
-
-      <!-- Chat in lobby -->
-      <div class="chat-panel">
+      <!-- Chat panel as separate side card -->
+      <div class="glass-card lobby-chat-card">
+        <h3>💬 Chat</h3>
         <div id="chat-messages" class="chat-messages"></div>
         <div class="chat-input-row">
           <input type="text" id="chat-input" class="input chat-input" placeholder="Say something…" maxlength="200" autocomplete="off">
           <button id="btn-chat-send" class="btn btn-primary btn-sm">↑</button>
         </div>
       </div>
-
-      <button id="btn-start-game" class="btn btn-primary btn-lg hidden">🚀 Start Game</button>
-      <p id="lobby-waiting" class="subtle-text">Waiting for host to start…</p>
     </div>
   </div>
 
@@ -150,26 +151,38 @@
       <button id="btn-sound-toggle" class="btn btn-ghost btn-sm sound-toggle" title="Toggle Sound">🔊</button>
     </div>
 
-    <!-- Reaction bar (multiplayer) -->
-    <div id="reaction-bar" class="reaction-bar hidden">
-      <button class="reaction-btn" data-emoji="😱">😱</button>
-      <button class="reaction-btn" data-emoji="💀">💀</button>
-      <button class="reaction-btn" data-emoji="🎉">🎉</button>
-      <button class="reaction-btn" data-emoji="😤">😤</button>
-      <button class="reaction-btn" data-emoji="🔥">🔥</button>
-      <button class="reaction-btn" data-emoji="👀">👀</button>
-    </div>
-
     <div class="game-layout">
       <div id="board-container" class="board-container"></div>
+
+      <!-- MP Sidebar: player dropdown + watched board + chat -->
       <div id="mp-sidebar" class="mp-sidebar hidden">
         <h3>Players</h3>
         <div id="mp-player-list" class="mp-player-list"></div>
+
+        <!-- Player selector + watched board -->
+        <div id="watch-section" class="watch-section hidden">
+          <label class="input-label">Watch Player</label>
+          <select id="watch-player-select" class="input watch-select"></select>
+          <div id="watched-board-container" class="watched-board-container"></div>
+        </div>
+
+        <!-- Chat in game -->
+        <div class="game-chat-panel">
+          <h3>💬 Chat</h3>
+          <div id="game-chat-messages" class="chat-messages"></div>
+          <div class="chat-input-row">
+            <input type="text" id="game-chat-input" class="input chat-input" placeholder="Say something…" maxlength="200" autocomplete="off">
+            <button id="btn-game-chat-send" class="btn btn-primary btn-sm">↑</button>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Floating reactions container -->
-    <div id="floating-reactions" class="floating-reactions"></div>
+    <!-- Post-finish spectate banner -->
+    <div id="spectate-banner" class="spectate-banner hidden">
+      <span>Game over! </span>
+      <button id="btn-watch-others" class="btn btn-primary btn-sm">👁️ Watch Others</button>
+    </div>
   </div>
 
   <!-- ═══════════════════ SPECTATOR SCREEN ═══════════════════ -->
@@ -178,12 +191,26 @@
       <span class="spectator-badge">👁️ SPECTATING</span>
       <span id="spectator-room-code" class="code"></span>
     </div>
-    <div id="spectator-boards" class="spectator-boards"></div>
-    <div id="spectator-chat" class="chat-panel spectator-chat">
-      <div id="spectator-chat-messages" class="chat-messages"></div>
-      <div class="chat-input-row">
-        <input type="text" id="spectator-chat-input" class="input chat-input" placeholder="Say something…" maxlength="200" autocomplete="off">
-        <button id="btn-spectator-chat-send" class="btn btn-primary btn-sm">↑</button>
+    <div class="spectator-layout">
+      <div class="spectator-main">
+        <div class="spectator-controls">
+          <label class="input-label">Watching</label>
+          <select id="spectator-player-select" class="input watch-select"></select>
+        </div>
+        <div id="spectator-watched-board" class="spectator-watched-board"></div>
+        <div id="spectator-player-progress" class="progress-bar"><div id="spectator-progress-fill" class="progress-fill" style="width: 0%"></div></div>
+      </div>
+      <div class="glass-card spectator-sidebar">
+        <h3>Players</h3>
+        <div id="spectator-player-list" class="mp-player-list"></div>
+        <div class="game-chat-panel">
+          <h3>💬 Chat</h3>
+          <div id="spectator-chat-messages" class="chat-messages"></div>
+          <div class="chat-input-row">
+            <input type="text" id="spectator-chat-input" class="input chat-input" placeholder="Say something…" maxlength="200" autocomplete="off">
+            <button id="btn-spectator-chat-send" class="btn btn-primary btn-sm">↑</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
