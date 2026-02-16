@@ -2,10 +2,10 @@
   "name": "minesweeper",
   "version": "1.0.0",
   "description": "Minesweeper web game with singleplayer and multiplayer modes",
-  "main": "server.js",
+  "main": "src/server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "npx -y nodemon server.js"
+    "start": "node src/server.js",
+    "dev": "npx -y nodemon src/server.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.95.3",

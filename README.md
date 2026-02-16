@@ -29,7 +29,7 @@ A real-time Minesweeper web game with **singleplayer** and **multiplayer** modes
 # Install dependencies
 npm install
 
-# Start the server
+# Start the server (with hot reload)
 npm run dev
 
 # Open in browser
@@ -41,7 +41,7 @@ open http://localhost:3000
 Leaderboard data persists when connected to Supabase. Without it, scores are stored in-memory and reset on restart.
 
 1. Create a project at [supabase.com](https://supabase.com)
-2. Run `schema.sql` in the Supabase SQL Editor
+2. Run `db/schema.sql` in the Supabase SQL Editor
 3. Copy `.env.example` → `.env` and fill in your credentials:
    ```
    SUPABASE_URL=https://your-project.supabase.co
@@ -71,16 +71,19 @@ Leaderboard data persists when connected to Supabase. Without it, scores are sto
 ## Project Structure
 
 ```
-├── server.js          # Express + Socket.IO server
-├── game.js            # Core game logic (board gen, reveal, flag, win check)
-├── db.js              # Storage layer (Supabase or in-memory fallback)
-├── schema.sql         # Supabase table & index definitions
+├── src/
+│   ├── server.js      # Express + Socket.IO server
+│   ├── game.js        # Core game logic (board gen, reveal, flag, win check)
+│   └── db.js          # Storage layer (Supabase or in-memory fallback)
+├── public/
+│   ├── index.html     # Game UI (menu, lobby, board, results)
+│   ├── style.css      # Dark glassmorphism theme
+│   └── app.js         # Client-side game logic & Socket.IO integration
+├── db/
+│   └── schema.sql     # Supabase table & index definitions
 ├── .env.example       # Environment variable template
 ├── package.json
-└── public/
-    ├── index.html     # Game UI (menu, lobby, board, results)
-    ├── style.css      # Dark glassmorphism theme
-    └── app.js         # Client-side game logic & Socket.IO integration
+└── README.md
 ```
 
 ## License
